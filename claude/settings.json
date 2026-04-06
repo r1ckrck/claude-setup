@@ -1,0 +1,14 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-settings.json",
+    "env": { // run claude code with ollama run "claude --model qwen3-coder:480b-cloud"
+        "ANTHROPIC_AUTH_TOKEN": "ollama",
+        "ANTHROPIC_API_KEY": "",
+        "ANTHROPIC_BASE_URL": "http://localhost:11434"
+    },
+    "env": { // run claude code with openrouter
+        "ANTHROPIC_AUTH_TOKEN": "<openrouter-token>",
+        "ANTHROPIC_API_KEY": "",
+        "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+        "ANTHROPIC_MODEL": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+}
