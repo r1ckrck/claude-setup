@@ -79,7 +79,8 @@
             "mcp__paper__update_styles",
             "mcp__paper__write_html",
             "mcp__plugin_context7_context7__resolve-library-id",
-            "mcp__plugin_context7_context7__query-docs"
+            "mcp__plugin_context7_context7__query-docs",
+            "WebSearch"
         ],
         "defaultMode": "default"
     },
