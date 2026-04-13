@@ -80,7 +80,9 @@
             "mcp__paper__write_html",
             "mcp__plugin_context7_context7__resolve-library-id",
             "mcp__plugin_context7_context7__query-docs",
-            "WebSearch"
+            "WebSearch",
+            "WebFetch(domain:github.com)",
+            "WebFetch(domain:raw.githubusercontent.com)"
         ],
         "defaultMode": "default"
     },
