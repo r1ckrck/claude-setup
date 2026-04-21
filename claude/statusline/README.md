@@ -5,16 +5,17 @@ A native two-line statusline for Claude Code, with no plugins or runtime depende
 ## What it looks like
 
 ```
- 󰚩 Opus 4.7    ~/project   main ↑1 · 3h ago 
+ 󰚩 Opus 4.7  high    ~/project   main ↑1 · 3h ago 
 
  cache 96% │ 󰚋 ctx ███░░░░░░░ 32% │  5h █████░░░░░ 55% ↻ 2h 30m │  7d 28% ↻ 5d 0h │  api 8m 12s │ $ 0.45
 ```
 
-- **Line 1 — identity**: model pill · folder → git (chained arrows in the blue family — same hue, different shades, so folder + its repo state read as one unit)
+- **Line 1 — identity**: model pill + effort pill (chained) · folder → git (chained arrows in the blue family — same hue, different shades, so folder + its repo state read as one unit)
 - **Line 2 — metrics**: cache hit · context · 5h usage · 7d usage · API wait · session cost
 - Nerd-font icons, ANSI colors pulled from your terminal palette
 - Progress bars that shift green → yellow → red as usage climbs
 - Model pill color changes by family (Opus violet, Sonnet blue, Haiku green)
+- Effort pill color ramps cool grey → warm amber as effort climbs; absent when unset
 - Git segment turns solid red when the working tree is dirty
 
 > **Note on colors**: When Sonnet is selected, the model pill and the CWD arrow are both in the blue family. The *shapes* still distinguish them (rounded pill vs. arrow chain). This is an intentional trade-off — keeping folder + git as a chromatically unified pair was judged more valuable than avoiding the occasional blue-on-blue pairing.
@@ -68,10 +69,30 @@ For iTerm2 / Terminal.app / other terminals, set the profile font to the same ne
 | Element | Meaning |
 |---------|---------|
 | 󰚩 Model name | Which Claude model is active. Pill color = model family (Opus violet, Sonnet blue, Haiku green). |
+| Effort | Current `/effort` tier (Opus thinking level). Chained into the model pill. Absent when unset. |
 |  Folder | Current working directory, `~` replaces `$HOME`. |
 |  Branch | Git branch name + ahead/behind vs upstream + last commit age. |
 
 **Dirty state**: if the working tree has uncommitted changes, the entire git segment's background turns **red**.
+
+**Effort tiers** (values from `/effort` or `/model`; resolved from transcript → settings.json):
+
+| Tier | Look | Meaning |
+|------|------|---------|
+| *(unset)* | pill omitted | Effort not configured — no segment drawn |
+| `low` | grey bg · dim white fg | Minimal thinking — quiet, stays out of the way |
+| `medium` | cyan bg · bright white fg | Cool, engaged |
+| `high` | yellow bg · **bold** black fg | Warm — the everyday high-effort default |
+| `xhigh` | bright yellow bg · **bold** black fg | Hot — Opus 4.7 only |
+| `max` | red bg · **bold** white fg · ✦ prefix | Full tilt — signature state |
+
+Each tier uses a **distinct hue** so the effort level is recognizable at a glance without reading the label. The ramp walks cool → warm → hot: grey → cyan → yellow → amber → red.
+
+> **Note on red**: Red also appears on a dirty git tree. The two don't conflict — git red sits in the arrow chain after the folder, effort red sits chained into the model pill at the very left. The `✦` marker on `max` further separates it from an accidental "red = warning" read. If you'd rather not share the hue at all, swap `effort_bg=41` to `effort_bg=105` (magenta) or `106` (bright cyan) in `statusline.sh`.
+
+**Model-specific tiers**:
+- **Opus 4.7** supports all five: `low`, `medium`, `high`, `xhigh`, `max`
+- **Opus 4.6 / Sonnet 4.6** cap at `max` — there is no `xhigh` tier
 
 ### Line 2 — metrics
 
@@ -112,6 +133,11 @@ Claude Code pipes a JSON payload to the script's `stdin` on every refresh. Key f
 
 `rate_limits` are populated by Claude Code itself (server-authoritative) — no third-party usage tool needed.
 
+**Effort level** isn't in the stdin payload. The script resolves it from two sources:
+
+1. **Session transcript** (`transcript_path`) — the most recent `Set model to … with <level> effort` line.
+2. **`~/.claude/settings.json`** (`effortLevel`) — used when the transcript has no in-session change. Respects `$CLAUDE_CONFIG_DIR`.
+
 ## Performance
 
 One `jq` call + a handful of `git` commands. Measured at 10–30 ms per refresh. Well under the ~300 ms threshold where statuslines feel sluggish.
@@ -123,6 +149,7 @@ All colors are ANSI 16 codes (e.g. `31` = red, `44` = blue bg, `95` = bright mag
 Common tweaks in `statusline.sh`:
 
 - **Model pill hues** — search for `case "$model_lc"` and change the `model_bg` value (40–47 or 100–107 range).
+- **Effort ramp** — search for `case "$effort"` and adjust `effort_bg` / `effort_fg` per tier.
 - **Threshold colors** — see `pct_fg()` and `cache_fg()` functions.
 - **Icons** — search for `ICO_*` variables. Each is a raw UTF-8 sequence for a nerd-font private-use-area codepoint; replace with the UTF-8 for a different nerd-font glyph.
 - **Remove a segment** — delete the corresponding `add ...` block in the Line 2 section.

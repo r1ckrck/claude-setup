@@ -56,6 +56,26 @@ fi
 
 short_cwd="${cwd/#$HOME/~}"
 
+# Effort level.
+effort=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+  effort=$(tail -n 400 "$transcript" 2>/dev/null \
+    | jq -r 'select(.type == "user"
+                    and (.message.content | type == "string")
+                    and (.message.content | contains("<local-command-stdout>Set model to")))
+             | .message.content' 2>/dev/null \
+    | sed $'s/\033\\[[0-9;]*m//g' \
+    | grep -oE 'with (low|medium|high|xhigh|max) effort' \
+    | tail -n 1 \
+    | grep -oE '(low|medium|high|xhigh|max)')
+fi
+if [ -z "$effort" ]; then
+  settings_path="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+  if [ -f "$settings_path" ]; then
+    effort=$(jq -r '.effortLevel // empty' "$settings_path" 2>/dev/null)
+  fi
+fi
+
 # ── Helpers ─────────────────────────────────────────────────
 fmt_dur() {
   local ms=${1:-0}; local s=$((ms / 1000))
@@ -136,6 +156,25 @@ pill() {
   printf '\033[%sm%s\033[0m' "$cap" "$PL_RHC"
 }
 
+# Open a pill that will be chained into another (rounded left, flat right).
+pill_open() {
+  local bg=$1 fg=$2 text=$3
+  local cap=$((bg - 10))
+  printf '\033[%sm%s' "$cap" "$PL_LHC"
+  printf '\033[%sm\033[%sm %s ' "$bg" "$fg" "$text"
+}
+# Join into the next pill.
+pill_join() {
+  local prev_bg=$1 next_bg=$2 next_fg=$3 text=$4
+  printf '\033[%sm \033[%sm\033[%sm %s ' "$prev_bg" "$next_bg" "$next_fg" "$text"
+}
+# Close a chained pill (rounded right cap).
+pill_close() {
+  local bg=$1
+  local cap=$((bg - 10))
+  printf '\033[%sm\033[%sm%s\033[0m' "$bg" "$cap" "$PL_RHC"
+}
+
 # Arrow segment: square left edge, right-arrow tip. For git "state flag".
 #   $1 bg   $2 fg (may be "1;97" etc.)   $3 text
 arrow_seg() {
@@ -173,7 +212,23 @@ case "$model_lc" in
   *haiku*)  model_bg=42 ;;   # green pastel            #a3bf8f
   *)        model_bg=45 ;;   # fallback: violet
 esac
-out+=$(pill "$model_bg" "1;97" "$ICO_MODEL $model")
+# Effort pill colors.
+effort_bg=""; effort_fg=""; effort_label=""
+case "$effort" in
+  low)    effort_bg=100; effort_fg=37;     effort_label="low"    ;;  # grey / dim white
+  medium) effort_bg=46;  effort_fg="1;97"; effort_label="medium" ;;  # cyan / bright white
+  high)   effort_bg=43;  effort_fg="1;30"; effort_label="high"   ;;  # yellow / bold black
+  xhigh)  effort_bg=103; effort_fg="1;30"; effort_label="xhigh"  ;;  # bright yellow / bold black
+  max)    effort_bg=41;  effort_fg="1;97"; effort_label="✦ max"  ;;  # red / bold white + marker
+esac
+
+if [ -n "$effort_label" ]; then
+  out+=$(pill_open "$model_bg" "1;97" "$ICO_MODEL $model")
+  out+=$(pill_join "$model_bg" "$effort_bg" "$effort_fg" "$effort_label")
+  out+=$(pill_close "$effort_bg")
+else
+  out+=$(pill "$model_bg" "1;97" "$ICO_MODEL $model")
+fi
 out+=" "
 
 # CWD + Git form a single arrow chain (blue family — same hue, different shades).
