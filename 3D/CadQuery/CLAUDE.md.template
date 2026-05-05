@@ -1,0 +1,217 @@
+# <PROJECT NAME> — CadQuery Workspace
+
+This project models **functional FDM 3D-print parts in CadQuery (Python)**. Hobbyist desktop FDM (PLA/PETG, 0.4 mm nozzle assumed unless told otherwise). Output is STL/3MF for a slicer. Code-first: every dimension is a parameter at the top of a `.py` script.
+
+## Setup & commands
+
+```bash
+source .venv/bin/activate
+
+# Build the current part → STL (each script writes its own .stl)
+python3 src/<part>_v<N>.py
+
+# One-shot: run script, render preview, fail loud on non-watertight output
+python3 ~/.claude/skills/parametric-3d-printing/run_cadquery_model.py \
+    src/<part>_v<N>.py --preview --strict
+
+# Standalone multi-view preview (when the STL already exists)
+python3 ~/.claude/skills/parametric-3d-printing/preview.py \
+    exports/<part>_v<N>.stl out.png --views multi --strict
+```
+
+The skill at `~/.claude/skills/parametric-3d-printing/` (cad-skill) provides `preview.py`, `run_cadquery_model.py`, `mesh_io.py`, `stl_to_3mf.py`. Reuse these — don't duplicate.
+
+No tests, no build system, no linting. Outputs are STL files and PNG renders.
+
+## The build → render → compare loop
+
+1. Edit `src/<part>_v<N>.py`.
+2. Run it — exports STL, runs the trimesh repair tail to close per-face mesher gaps.
+3. Render a preview PNG.
+4. Compare with reference images / earlier renders / the visual target.
+5. Iterate.
+
+Every script ends with the same trimesh repair block:
+
+```python
+cq.exporters.export(result, "exports/part.stl",
+                    tolerance=0.005, angularTolerance=0.05)
+
+import trimesh
+m = trimesh.load("exports/part.stl")
+m.merge_vertices(digits_vertex=4); m.fill_holes(); m.fix_normals()
+m.export("exports/part.stl")
+```
+
+This typically gets ≤ 6 open edges, well within slicer auto-repair.
+
+## Coordinate convention
+
+| Axis | Meaning |
+|---|---|
+| **X** | width (left/right). Body symmetric about X=0 unless noted. |
+| **Y** | depth. **+Y = <FRONT FACE>**, **−Y = <BACK FACE>**. |
+| **Z** | up. Z=0 = bottom of body. |
+
+Use `centered=(True, True, False)` on `.box()` so `.faces("<Z")` is always the print bed.
+
+> **Gotcha:** `cq.Workplane("XZ")` extrudes in **−Y**, not +Y. For text/wordmark debossing on the +Y face, use an explicit `cq.Plane(..., normal=(0,-1,0))` plus `.mirror("YZ")` to land glyphs readable from the front.
+
+## Script structure (every part follows this)
+
+```python
+import cadquery as cq
+
+# ============================================================
+# PARAMETERS - edit these to customize
+# ============================================================
+WIDTH  = 60.0   # mm - outer X
+DEPTH  = 40.0   # mm - outer Y
+HEIGHT = 25.0   # mm - outer Z
+WALL   = 2.0    # mm - wall thickness (min 1.2 for FDM)
+R      = 2.0    # mm - corner fillet radius
+GAP    = 0.3    # mm - press-fit clearance
+
+# ============================================================
+# MODEL
+# ============================================================
+result = (
+    cq.Workplane("XY")
+    .box(WIDTH, DEPTH, HEIGHT, centered=(True, True, False))
+    .edges("|Z").fillet(R)
+    # ... build geometry from parameters above
+)
+
+# ============================================================
+# EXPORT + WATERTIGHT REPAIR
+# ============================================================
+out = "exports/part.stl"
+cq.exporters.export(result, out, tolerance=0.005, angularTolerance=0.05)
+
+import trimesh
+m = trimesh.load(out)
+m.merge_vertices(digits_vertex=4); m.fill_holes(); m.fix_normals()
+m.export(out)
+print(f"watertight: {m.is_watertight}  bbox: {m.bounding_box.extents}")
+```
+
+All dimensions go in the PARAMETERS block. Descriptive names, units in comments, related params grouped with blank lines.
+
+## Reusable CadQuery patterns
+
+```python
+def rounded_rect_sketch(w, d, r):
+    return cq.Sketch().rect(w, d).vertices().fillet(r)
+
+def section_extrude(z0, z1, w, d, r):
+    return (cq.Workplane("XY", origin=(0, 0, z0))
+            .placeSketch(rounded_rect_sketch(w, d, r))
+            .extrude(z1 - z0))
+
+def transition_loft(z0, w0, d0, r0, z1, w1, d1, r1):
+    from cadquery.occ_impl.geom import Location, Vector
+    sketches = [
+        rounded_rect_sketch(w0, d0, r0).moved(Location(Vector(0, 0, z0))),
+        rounded_rect_sketch(w1, d1, r1).moved(Location(Vector(0, 0, z1))),
+    ]
+    return cq.Workplane("XY").placeSketch(*sketches).loft(combine=True, ruled=False)
+```
+
+Selective fillets use `cq.selectors.BoxSelector` with a thin Z-slab.
+
+## Pitfalls — fix causes, not symptoms
+
+- **Prefer boolean subtraction over `.shell()`.** `.shell()` fails on tapers, lofts, multi-primitive unions, heavy fillets. Use `outer.cut(inner)` with inner shrunk by `2*WALL`.
+- **Fillet → cut, not cut → fillet.** Apply largest-radius fillets while the body is still a clean primitive. Filleting after `.cut()` often raises `BRep_API: command not done`.
+- **No try/except around fillets to "downgrade" radius.** A fillet failure means the radius or geometry is wrong; find and fix the cause.
+- **Vertical fillet R ≤ min(W, D)/2.** Narrow features cap their own R; the body's R doesn't have to match.
+- **Bottom fillet R strictly < half body Y depth.** Equal radii meet at Y=0 → degenerate seam → "non-manifold" warning.
+- **Loft adjacent profiles must differ.** Identical W and D on adjacent profiles → loft fails.
+- **Loft is fragile.** Prefer `.extrude(taper=angle)` for shape → scaled-shape. `.loft()` only for genuinely different profiles.
+- **Taper sign:** positive narrows (draft inward), negative flares.
+- **Zero-thickness booleans:** add 0.01 mm epsilon when a cut is meant to pass *just* through a surface.
+- **"Watertight: False" usually means boundary (1-face) edges, not real holes.** Count them before assuming a leak.
+
+## Diagnostics — slice first, render second
+
+3D iso renders foreshorten. Slice the mesh in world coords to confirm a feature is the same one you're picturing:
+
+```python
+import trimesh
+m = trimesh.load("exports/part.stl")
+m.section(plane_origin=[X, 0, 0], plane_normal=[1, 0, 0])  # YZ at X
+m.section(plane_origin=[0, 0, Z], plane_normal=[0, 0, 1])  # XY at Z
+m.section(plane_origin=[0, Y, 0], plane_normal=[0, 1, 0])  # XZ at Y
+```
+
+Keep these as small `<part>_diag_*.py` scripts in the repo — reusable when the same class of bug recurs.
+
+## FDM design rules — apply while modeling
+
+> FDM is constrained by **gravity during the build** and **anisotropy after**. Orientation is the load path — decide it before modeling. Z-strength is ~4–5× weaker than XY.
+
+1. **Orient first.** Pick the bed face before geometry. Load path runs along XY.
+2. **No supports.** Redesign instead: bottom overhangs → chamfer ≥ 45°; horizontal holes Ø > 8 mm → teardrop; holes through bridges → sacrificial 1-layer floor; steep flat overhang → split + glue or rotate.
+3. **Mantra: fillets on top, chamfers on bottom.**
+4. **Bottom edges → 1–2 mm chamfer, never fillet** (= elephant's foot).
+5. **Walls in clean multiples of line width:** 0.8 / 1.2 / 1.6 / 2.0 mm. Default 1.6 mm = 4 perimeters at 0.4 mm nozzle.
+6. **Internal corners → fillet ≥ wall thickness.** Blend into a region, don't end at one critical layer.
+7. **Threads → heat-set brass inserts** for cycled fasteners. Captured nut pocket also fine. Tapped PLA = prototype only.
+8. **Print-in-place gaps:** PLA 0.2–0.3 mm, PETG 0.3–0.4 mm. Joint axes horizontal (XY).
+9. **Living hinges:** PLA fatigues — use PETG/TPU/PP, or a discrete pin.
+
+## Tolerance cheat sheet — PLA, 0.4 mm nozzle
+
+| Feature | Compensate |
+|---|---|
+| Hole Ø ≤ 5 mm | Oversize **+0.2 to +0.4 mm** |
+| Hole Ø 5–20 mm | Oversize +0.1 mm |
+| Hole Ø > 20 mm | Nominal |
+| External XY | Subtract 0.1 mm if critical |
+| Press fit | 0.05–0.10 mm gap |
+| **Snug friction** | **0.15–0.20 mm gap** |
+| Free running | 0.25–0.35 mm gap |
+
+Material adjustments: TPU +0.5 mm (flex), PETG +0.1 mm (sticks more), ABS scale up ~0.5–0.7% (shrinks). Always print a tolerance test before a multi-part assembly.
+
+## Pre-export checklist
+
+1. Export tolerance pinned: `tolerance=0.005, angularTolerance=0.05`.
+2. trimesh repair tail ran: `merge_vertices(4) → fill_holes → fix_normals`.
+3. `is_watertight=True`, or open-edge count ≤ 6 (slicer-repairable).
+4. Bounding box matches the parameters at the top of the script.
+5. Print orientation noted in the script header.
+6. Prefer 3MF over STL when the slicer supports it — 3MF carries units, STL is unitless. Convert via `stl_to_3mf.py`.
+
+## Working with the user
+
+- **Coordinate-anchored language is mandatory.** Lead with `(X, Y, Z) in mm`. Words like *back, lip, gap, plateau* are ambiguous on their own.
+- **Slice-first diagnostics, not 3D renders.** When the user describes a "gap," section the mesh and confirm coordinates before editing.
+- **One atomic change → rebuild → confirm → next.** No bundling fixes with refactors.
+- **Predict before editing.** State the parameter, expected geometry shift, expected volume delta *before* the edit. Catches misreads before code lands.
+- **"No X" means stop reaching for X-shaped solutions.** Even a different-looking variant is still X. Re-diagnose.
+- **"Find the gap" means stop and diagnose**, not "find then fix in the same turn." Pause at diagnosis, get confirmation, then propose the fix.
+
+## When CadQuery is the wrong tool
+
+> CadQuery is parametric B-rep, not mesh sculpting. Right for **precise mating dimensions, bolt patterns, parametric assemblies, snap-fits dialed by clearance numbers**. Wrong for **organic surfaces, sculpted grips, decorative reliefs, anything felt out by eye**.
+
+If a feature is genuinely organic, model it in Blender, export STL, and union it with the parametric chassis as a final step. Don't fight CadQuery for sculpted work.
+
+## Folder layout
+
+```
+<project-name>/
+├── CLAUDE.md         ← this file
+├── README.md         ← what the project is, dimensions, design decisions, slicer settings
+├── .venv/            ← Python 3.12 venv (gitignored)
+├── requirements.txt  ← pinned cadquery + trimesh + pyrender + Pillow
+├── src/              ← .py scripts, one per part / family. Versioned filenames.
+│   ├── <part>_v1.py  ← never modified after retirement; documents decisions
+│   ├── <part>_v2.py
+│   └── <part>_diag_*.py  ← diagnostic slice scripts
+├── exports/          ← STL / 3MF outputs for the slicer
+└── references/       ← reference STLs / target images
+```
+
+**Never modify an old version.** The chain of `_v1`, `_v2`, ... is the audit trail of decisions.
