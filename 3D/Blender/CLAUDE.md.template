@@ -1,0 +1,94 @@
+# <PROJECT NAME> — Blender Workspace
+
+This project is for modeling **functional FDM 3D-print parts in Blender**. Hobbyist desktop FDM (PLA/PETG, 0.4 mm nozzle assumed unless told otherwise). Not animation, render, or visualization. Output is STL/3MF for a slicer.
+
+## Workflow
+
+**MCP-first.** Blender Lab MCP server is configured in `.mcp.json`:
+- `get_objects_summary` / `get_object_detail_summary` — inspect before mutating
+- `execute_blender_code` — run `bpy` Python in the live session
+- `get_screenshot_of_window_as_image` — verify visual results
+- Keep code blocks small and idempotent.
+
+**Skills used:** `blender-modeling-modifiers` (primary), `blender-scene-rendering` (export only), `blender-geometry-nodes` (procedural patterns), `blender-python-scripting` (automation). **Ignore** `shader-nodes`, `animation-rigging`, `compositing-nodes`, `physics-simulation`.
+
+## Blender setup — verify at session start
+
+| Setting | Value |
+|---|---|
+| Units > System | Metric |
+| Units > Length | Millimeters |
+| Units > Unit Scale | **0.001** (1 BU = 1 mm) |
+| Add-ons | **3D Print Toolbox** + **3MF format** enabled |
+
+If wrong, fix before modeling — wrong scale exports a 1000× oversize STL.
+
+## Mental flip vs injection molding / CNC
+
+> FDM is constrained by **gravity during the build** and **anisotropy after**. Orientation is the load path — decide it before modeling. Z-strength is ~4–5× weaker than XY.
+
+What flips from IM/CNC intuition: draft angles **irrelevant**; uniform walls **less critical**; undercuts **free**; cycle time = hours, so print time is a design constraint.
+
+## Design rules — apply while modeling
+
+1. **Orient first.** Pick the bed face before geometry. Load path runs along XY.
+2. **No supports.** Redesign instead:
+   - Bottom overhangs → **chamfer ≥ 45°**, not fillet
+   - Horizontal holes Ø > 8 mm → **teardrop** (90° peak)
+   - Holes through bridges → **sacrificial 1-layer floor**, drilled out post-print
+   - Steep flat overhang → split + glue, or rotate
+3. **Mantra: fillets on top, chamfers on bottom.**
+4. **Bottom edges → 1–2 mm chamfer.** Never fillet (= elephant's foot).
+5. **Walls > infill.** 4 perimeters = 1.6 mm wall = functional default. Wall thickness must be a clean multiple of line width (0.8, 1.2, 1.6, 2.0 mm).
+6. **Internal corners → fillet** ≥ wall thickness. Blend into a region, don't end at one critical layer.
+7. **Threads → heat-set brass inserts** for any cycled fastener. Captured nut pocket (with sacrificial bridge) also fine. Tapped PLA = prototype only.
+8. **Print-in-place gaps:** PLA 0.2–0.3 mm, PETG 0.3–0.4 mm. Joint/hinge axes must be horizontal (XY).
+9. **Living hinges:** PLA fatigues — use PETG/TPU/PP, or a discrete pin.
+
+## Tolerance cheat sheet — PLA, 0.4 mm nozzle, starting points
+
+| Feature | Compensate |
+|---|---|
+| Hole Ø ≤ 5 mm | Oversize **+0.2 to +0.4 mm** |
+| Hole Ø 5–20 mm | Oversize +0.1 mm |
+| Hole Ø > 20 mm | Nominal |
+| External XY | Subtract 0.1 mm if critical |
+| Press fit | 0.05–0.10 mm gap |
+| **Snug friction** | **0.15–0.20 mm gap** |
+| Free running | 0.25–0.35 mm gap |
+
+Always print a tolerance test before committing to a multi-part assembly.
+
+## Pre-export checklist (Blender → STL/3MF)
+
+1. **Apply all modifiers** (Subsurf, Mirror, Solidify, Bevel — all of them; STL ignores live modifiers unless `apply_modifiers=True`)
+2. **Apply scale** (Ctrl-A → Scale)
+3. **Recalculate normals** (Edit Mode → Shift-N)
+4. **Manifold check** (3D Print Toolbox → "Check All" → "Make Manifold")
+5. **Prefer 3MF over STL** when slicer supports it — 3MF carries units, STL is unitless
+
+## Boolean — common failure pattern
+
+Booleans need clean, manifold operands with no coplanar faces.
+- Apply **Solidify** and **Bevel** *before* Boolean, never after.
+- Use the **Exact** solver for anything load-bearing (5.1 made it fast — no reason to use Fast).
+- Hide cutter objects: `cutter.hide_viewport = True`.
+
+## When Blender is the wrong tool
+
+> Blender is mesh-based, not parametric. Right for **organic, sculpted, decorative, hard-surface stylized**. Wrong for **precise mating dimensions, bolt patterns, gear meshes, threads-to-spec, parametric assemblies**.
+
+If a part needs precise mating dimensions or parametric history, recommend Plasticity / Fusion 360 / OnShape rather than fighting Blender. Don't silently struggle.
+
+## Folder layout
+
+```
+<project-name>/
+├── README.md     ← what the project is, math/dimensions, design decisions, slicer settings
+├── parts/        ← `.blend` sources, one file per part (or per family)
+└── exports/      ← STL / 3MF outputs for the slicer
+```
+
+Repo-root files:
+- `CLAUDE.md` — this file
+- `.mcp.json` — MCP server config (don't edit unless transport changes)

@@ -40,11 +40,13 @@ Paste the following into your VS Code `settings.json` (`Cmd+Shift+P` → "Open U
     "sideBarSectionHeader.foreground": "#b5afc0",
     "sideBarSectionHeader.border": "#2a2435",
 
-    "list.activeSelectionBackground": "#7b6a9e33",
+    "list.activeSelectionBackground": "#7b6a9e55",
     "list.activeSelectionForeground": "#d0cdd8",
-    "list.inactiveSelectionBackground": "#7b6a9e22",
+    "list.inactiveSelectionBackground": "#7b6a9e44",
     "list.hoverBackground": "#7b6a9e18",
     "list.focusBackground": "#7b6a9e33",
+    "list.focusOutline": "#7b6a9e",
+    "list.focusAndSelectionOutline": "#7b6a9e",
 
     "activityBar.background": "#08070e",
     "activityBar.foreground": "#d0cdd8",
@@ -94,6 +96,7 @@ Paste the following into your VS Code `settings.json` (`Cmd+Shift+P` → "Open U
     "terminal.ansiBrightMagenta": "#c4b4e0",
     "terminal.ansiBrightCyan": "#a0d4c8",
     "terminal.ansiBrightWhite": "#d8d5e0",
+    "terminal.tab.activeBorder": "#7b6a9e",
 
     "statusBar.background": "#08070e",
     "statusBar.foreground": "#6a6378",
