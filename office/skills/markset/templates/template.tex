@@ -1,0 +1,581 @@
+% =============================================================================
+% Markset — LaTeX Template
+% Structural only. All design values come from the theme (YAML) via
+% templates/apply-theme.lua, which emits \ms tokens and color definitions
+% into the header-includes block below. See themes/SCHEMA.md for the token map.
+% =============================================================================
+
+\documentclass[10pt,a4paper]{article}
+
+% =============================================================================
+% PACKAGE LOAD — all packages load BEFORE the token injection block so
+% xcolor and fontspec are available when tokens are emitted. Configuration
+% that CONSUMES tokens (setmainfont, titleformat, tcolorbox, etc.) all
+% happens BELOW the injection block.
+% =============================================================================
+
+\usepackage[
+  top=$mspage_margin_top$,
+  bottom=$mspage_margin_bottom$,
+  left=$mspage_margin_left$,
+  right=$mspage_margin_right$,
+  headheight=$mspage_header_height$,
+  headsep=$mspage_header_sep$,
+  footskip=$mspage_footer_skip$
+]{geometry}
+
+\usepackage{fontspec}     % XeLaTeX/LuaLaTeX via Tectonic
+\usepackage{xcolor}       % must load before \definecolor in header-includes
+\usepackage{pagecolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{calc}
+\usepackage{varwidth}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{placeins}     % provides \FloatBarrier (used by divs.lua before H2/H3 headings)
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{amssymb}
+\usepackage[bottom]{footmisc}
+
+% Pandoc shims — harmless if already defined by Pandoc's own output
+\providecommand{\pandocbounded}[1]{#1}
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\passthrough}[1]{#1}
+
+% =============================================================================
+% TOKEN INJECTION — apply-theme.lua emits tokens here
+% =============================================================================
+
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+% =============================================================================
+% CONFIGURATION — everything below consumes tokens
+% =============================================================================
+
+% ---- Page background + default text colour ---------------------------------
+\pagecolor{pagebg}
+\color{textprimary}
+\setlength{\parindent}{0pt}
+
+% ---- Fonts -----------------------------------------------------------------
+\setmainfont{\msfontmain}[
+  Path = $fontdir$/,
+  UprightFont = *\msmainregular,
+  BoldFont = *\msmainbold,
+  ItalicFont = *\msmainitalic,
+  BoldItalicFont = *\msmainbolditalic
+]
+\setmonofont{\msfontmono}[
+  Path = $fontdir$/,
+  UprightFont = *\msmonoregular,
+  BoldFont = *\msmonobold,
+  ItalicFont = *\msmonoitalic,
+  BoldItalicFont = *\msmonobolditalic,
+  Scale=\msmonoscale
+]
+
+% ---- Running header + footer -----------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+$if(ms_header_title_version)$
+\fancyhead[R]{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont\color{texttertiary}$title$ | v$version$}
+$endif$
+$if(ms_header_title_only)$
+\fancyhead[R]{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont\color{texttertiary}$title$}
+$endif$
+$if(ms_header_section)$
+\fancyhead[R]{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont\color{texttertiary}\leftmark}
+$endif$
+
+\fancyfoot[L]{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont\strut\msrenderfootnotes}
+\fancyfoot[R]{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont\strut\color{texttertiary}\thepage}
+
+\fancypagestyle{firstpage}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \renewcommand{\footrulewidth}{0pt}
+}
+
+% ---- Headings --------------------------------------------------------------
+% H1 (section) — title + full-width rule. The rule is nudged up to sit close
+% to the baseline; 0.55em is a text-relative nudge that scales with the
+% heading font size.
+\titleformat{\section}
+  {\fontsize{\msfonthone}{\msfonthonelh}\selectfont\bfseries\color{textprimary}}
+  {\thesection}{0.2em}{}
+  [\vspace{-0.55em}\rule{\textwidth}{\msrulethin}]
+\titlespacing*{\section}{0pt}{\mshonebefore}{\mshoneafter}
+
+\titleformat{\subsection}
+  {\fontsize{\msfonthtwo}{\msfonthtwolh}\selectfont\bfseries\color{textprimary}}
+  {\thesubsection}{0.3em}{}
+\titlespacing*{\subsection}{0pt}{\mshtwobefore}{\mshtwoafter}
+
+\titleformat{\subsubsection}
+  {\fontsize{\msfonththree}{\msfonththreelh}\selectfont\bfseries\color{textprimary}}
+  {\thesubsubsection}{0.3em}{}
+\titlespacing*{\subsubsection}{0pt}{\mshthreebefore}{\mshthreeafter}
+
+\titleformat{\paragraph}
+  {\fontsize{\msfonthfour}{\msfonthfourlh}\selectfont\bfseries\color{textprimary}}
+  {\theparagraph}{0.3em}{}
+\titlespacing*{\paragraph}{0pt}{\mshfourbefore}{\mshfourafter}
+
+% Orphan/widow + section penalty
+\widowpenalty=10000
+\clubpenalty=10000
+\makeatletter
+\@secpenalty=-500
+\makeatother
+
+% ---- Section numbering -----------------------------------------------------
+\setcounter{secnumdepth}{4}
+
+$if(ms_h1_numbered)$
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+\renewcommand{\theparagraph}{\thesubsubsection.\arabic{paragraph}}
+$else$
+\renewcommand{\thesection}{}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+\renewcommand{\theparagraph}{\thesubsubsection.\arabic{paragraph}}
+$endif$
+
+$if(ms_numbering_none)$
+\setcounter{secnumdepth}{-1}
+$endif$
+
+% ---- Table of Contents -----------------------------------------------------
+% H1 is the loud entry: bold, dotted leader, page number.
+% H2 / H3 are quiet — indented, no leader, no page number (tocloft's
+% \cftpagenumbersoff suppresses the page column entirely).
+\renewcommand{\cfttoctitlefont}{\fontsize{\msfonttoctitle}{\msfonttoctitlelh}\selectfont\bfseries\color{textprimary}}
+
+% H1 (section) — number prints at natural width (not in a fixed-width box),
+% with a constant 0.3em gap after it. Single and double digits look identical.
+% This is done by redefining \l@section to locally override \numberline so
+% the number isn't trapped in tocloft's fixed-width \cftsecnumwidth hbox.
+\renewcommand{\cftsecfont}{\fontsize{\msfonttocentry}{\msfonttocentrylh}\selectfont\bfseries\color{textprimary}}
+\renewcommand{\cftsecpagefont}{\fontsize{\msfonttocentry}{\msfonttocentrylh}\selectfont\color{textsecondary}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\makeatletter
+\renewcommand{\l@section}[2]{%
+  \par\addvspace{\cftbeforesecskip}%
+  \begingroup
+    \renewcommand{\numberline}[1]{##1\hspace*{0.3em}}%
+    \leftskip\z@ \rightskip\@tocrmarg \parfillskip -\rightskip
+    \parindent\z@ \@afterindenttrue
+    \interlinepenalty\@M
+    \leavevmode
+    \noindent{\cftsecfont #1}\nobreak%
+    \cftsecleader\nobreak%
+    \hb@xt@\@pnumwidth{\hfil\cftsecpagefont #2}\par%
+  \endgroup
+}
+\makeatother
+
+% H2 (subsection)
+\renewcommand{\cftsubsecfont}{\fontsize{\msfonttocentry}{\msfonttocentrylh}\selectfont\color{textsecondary}}
+\renewcommand{\cftsubsecleader}{\hfill}
+\cftpagenumbersoff{subsec}
+
+% H3 (subsubsection)
+\renewcommand{\cftsubsubsecfont}{\fontsize{\msfonttocentry}{\msfonttocentrylh}\selectfont\color{texttertiary}}
+\renewcommand{\cftsubsubsecleader}{\hfill}
+\cftpagenumbersoff{subsubsec}
+
+% H4 (paragraph) — kept off by tocdepth, but styled in case it's ever shown
+\renewcommand{\cftparafont}{\fontsize{\msfonttocentry}{\msfonttocentrylh}\selectfont\color{accentmuted}}
+\cftpagenumbersoff{para}
+\renewcommand{\cftparaleader}{\hfill}
+
+% Indent + spacing
+% Each level's number column starts where the parent level's text begins.
+% Numwidths sized to fit the number plus a tight ~0.3em gutter.
+\setlength{\cftsecnumwidth}{0pt}    % unused — H1 layout is custom (see \l@section above)
+\setlength{\cftsubsecindent}{1.4em}
+\setlength{\cftsubsecnumwidth}{1.8em}
+\setlength{\cftsubsubsecindent}{3.2em}
+\setlength{\cftsubsubsecnumwidth}{2.4em}
+\setlength{\cftparaindent}{5.6em}
+\setlength{\cftparanumwidth}{3em}
+\setlength{\cftbeforesecskip}{4pt}
+\setcounter{tocdepth}{3}
+
+% ---- Tables ----------------------------------------------------------------
+\setlength{\tabcolsep}{\mstablecolsep}
+\renewcommand{\arraystretch}{\mstablestretch}
+\arrayrulecolor{ruletable}
+\setlength{\heavyrulewidth}{\msrulethick}
+\setlength{\lightrulewidth}{\msrulethin}
+\setlength{\cmidrulewidth}{\msrulethin}
+
+\setlength\LTleft{0pt}
+\setlength\LTright\fill
+\setlength\LTpre{\mstablebefore}
+\setlength\LTpost{\mstableafter}
+
+% ---- Code blocks -----------------------------------------------------------
+\lstdefinestyle{codeblock}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\fontsize{\msfontcode}{\msfontcodelh}\selectfont\ttfamily\color{textprimary},
+  keywordstyle=\bfseries\color{textprimary},
+  stringstyle=\color{synstring},
+  commentstyle=\itshape\color{syncomment},
+  numberstyle=\fontsize{\msfontlinenumber}{\msfontlinenumberlh}\selectfont\ttfamily\color{synnumber},
+  breakatwhitespace=false,
+  breaklines=true,
+  keepspaces=true,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  mathescape=false,
+  frame=none,
+  xleftmargin=\mscodepadx,
+  xrightmargin=\mscodepadx,
+  framexleftmargin=\mscodepadx,
+  framexrightmargin=\mscodepadx,
+  framesep=\mscodepadx,
+  aboveskip=\mscodebefore,
+  belowskip=\mscodeafter,
+  literate={✓}{{\ensuremath{\checkmark}}}1 {✗}{{\ensuremath{\times}}}1 {→}{{\ensuremath{\rightarrow}}}1 {×}{{\ensuremath{\times}}}1
+}
+
+\lstdefinestyle{coverasciiart}{
+  basicstyle=\fontsize{\msfontasciicover}{\msfontasciicoverlh}\selectfont\ttfamily\color{textprimary},
+  backgroundcolor=\color{pagebg},
+  breaklines=false, breakatwhitespace=false, keepspaces=true,
+  showspaces=false, showstringspaces=false, showtabs=false, tabsize=2,
+  frame=none, xleftmargin=0pt, xrightmargin=0pt,
+  framexleftmargin=0pt, framexrightmargin=0pt, framesep=0pt,
+  aboveskip=0pt, belowskip=\msspacelg, mathescape=false
+}
+
+\lstdefinestyle{asciiart}{
+  basicstyle=\fontsize{\msfontasciibody}{\msfontasciibodylh}\selectfont\ttfamily\color{textprimary},
+  backgroundcolor=\color{pagebg},
+  breaklines=false, breakatwhitespace=false, keepspaces=true,
+  showspaces=false, showstringspaces=false, showtabs=false, tabsize=2,
+  frame=none, xleftmargin=0pt, xrightmargin=0pt,
+  framexleftmargin=0pt, framexrightmargin=0pt, framesep=0pt,
+  aboveskip=0pt, belowskip=0pt, mathescape=false
+}
+
+\lstset{style=codeblock}
+
+% Inline code
+\newcommand{\inlinecode}[1]{%
+  \setlength{\fboxsep}{\msspacexs}%
+  \colorbox{codebg}{\fontsize{\msfontinlinecode}{\msfontinlinecodelh}\selectfont\ttfamily\color{textprimary}#1}%
+}
+
+% ---- Callouts --------------------------------------------------------------
+\tcbset{
+  calloutbase/.style={
+    enhanced,
+    breakable,
+    boxrule=0pt,
+    frame hidden,
+    borderline west={\mscalloutborder}{0pt}{#1},
+    colback=calloutbg,
+    coltext=textprimary,
+    left=\mscalloutpadx,
+    right=\mscalloutpadx,
+    top=\mscalloutpady,
+    bottom=\mscalloutpady,
+    before skip=\mscalloutbefore,
+    after skip=\mscalloutafter,
+    fontupper=\fontsize{\msfontbody}{\msfontbodylh}\selectfont
+  }
+}
+
+\newtcolorbox{note}{calloutbase=noteborder,
+  before upper={\textcolor{texttertiary}{\msglyphnote}\hspace{6pt}}}
+\newtcolorbox{tip}{calloutbase=tipborder,
+  before upper={\textcolor{texttertiary}{\msglyphtip}\hspace{6pt}}}
+\newtcolorbox{warning}{calloutbase=warningborder,
+  before upper={\textcolor{texttertiary}{\msglyphwarning}\hspace{6pt}}}
+\newtcolorbox{important}{calloutbase=importantborder,
+  before upper={\textcolor{texttertiary}{\msglyphimportant}\hspace{6pt}}}
+
+% ---- Image placeholder -----------------------------------------------------
+\newtcolorbox{imageplaceholder}{
+  enhanced,
+  breakable,
+  boxrule=1pt,
+  colframe=placeholderborder,
+  colback=placeholderbg,
+  coltext=texttertiary,
+  left=\msspacelg,
+  right=\msspacelg,
+  top=\msspacelg,
+  bottom=\msspacelg,
+  before skip=\msspacemd,
+  after skip=\msspacemd,
+  fontupper=\fontsize{\msfontcaption}{\msfontcaptionlh}\selectfont,
+  halign=center,
+  valign=center,
+  height=\msimageplaceholderheight,
+  arc=0pt,
+  borderline={1pt}{0pt}{placeholderborder, dashed}
+}
+
+% ---- Two-column split layouts ----------------------------------------------
+% Used by divs.lua for ::: split-50-50 / split-35-65 / split-65-35.
+%
+% Built on tabular with p{} columns rather than minipages. Reason: tabular
+% cells are top-aligned at the cell's top edge, not at the first-content
+% baseline. With minipages this matters — a figure-first column and a
+% text-first column have different first-content baselines, so they can't
+% visually align under [t] AND keep the outer block spacing clean. Tabular
+% sidesteps that entirely.
+%
+% divs.lua emits \begin{mssplitrow}{Lwidth}{Rwidth}, the left column
+% content, an `&`, the right column content, then \end{mssplitrow}.
+% Pandoc renders the inner blocks normally (so images/lists/etc work).
+%
+% \msgutter (set in apply-theme.lua from rhythm.split.gutter) is the
+% horizontal gap between columns. \tabcolsep is zeroed so the only
+% horizontal space inside the row is the explicit @{\hspace{\msgutter}}.
+% Pre-computed cell widths — needed because tabular's preamble parser
+% won't reliably expand \dimexpr inside p{}.
+\newlength{\mscolwidthA}
+\newlength{\mscolwidthB}
+
+% \mscolsetup runs at the start of every column cell. Image-related defaults
+% need the explicit cell width because \linewidth inside a p{} cell may not
+% match the cell width.
+\newcommand{\mscolsetup}[1]{%
+  \setlength{\intextsep}{0pt}%
+  \setlength{\abovecaptionskip}{2pt}%
+  \setkeys{Gin}{width=#1,keepaspectratio}%
+}
+\newenvironment{mssplitrow}[2]{%
+  \par\nobreak
+  \begingroup
+  \setlength{\mscolwidthA}{#1}%
+  \setlength{\mscolwidthB}{#2}%
+  \setlength{\tabcolsep}{0pt}%
+  \renewcommand{\arraystretch}{1}%
+  % A figure / callout in a split cell starts one line below where text
+  % in the adjacent cell does, because tabular's leading strut takes a
+  % line that text shares but block environments don't. Pull both back
+  % with a -baselineskip+3pt nudge.
+  \newcommand{\msnudgefig}{\vspace*{-\dimexpr\baselineskip-3pt\relax}}%
+  % Callouts need a deeper nudge than figures: the tcolorbox adds top
+  % padding (\mscalloutpady) inside the box, which would otherwise push
+  % the box's content below the adjacent column's first line.
+  \newcommand{\msnudgecallout}{\vspace*{-\dimexpr\baselineskip+\mscalloutpady\relax}}%
+  \renewenvironment{figure}[1][]{%
+    \begingroup\captionsetup{type=figure}\msnudgefig\centering
+  }{\par\endgroup}%
+  % Wrap each callout: zero the tcolorbox's own before-skip so only the
+  % nudge moves the box, then prepend the nudge. \let captures the
+  % original env macros before \renewenvironment redefines them.
+  \setlength{\mscalloutbefore}{0pt}%
+  \let\msorignote\note\let\endmsorignote\endnote
+  \renewenvironment{note}{\msnudgecallout\msorignote}{\endmsorignote}%
+  \let\msorigtip\tip\let\endmsorigtip\endtip
+  \renewenvironment{tip}{\msnudgecallout\msorigtip}{\endmsorigtip}%
+  \let\msorigwarning\warning\let\endmsorigwarning\endwarning
+  \renewenvironment{warning}{\msnudgecallout\msorigwarning}{\endmsorigwarning}%
+  \let\msorigimportant\important\let\endmsorigimportant\endimportant
+  \renewenvironment{important}{\msnudgecallout\msorigimportant}{\endmsorigimportant}%
+  \begin{tabular}{@{}>{\mscolsetup{\mscolwidthA}}p{\mscolwidthA}@{\hspace{\msgutter}}>{\mscolsetup{\mscolwidthB}}p{\mscolwidthB}@{}}%
+}{%
+  \end{tabular}%
+  \endgroup
+  \par\addvspace{\msspacemd}%
+}
+
+% ---- Default image sizing --------------------------------------------------
+\setkeys{Gin}{width=\msimagedefaultwidth\linewidth,keepaspectratio}
+
+% Pin figures in place — no floating away from their source position.
+\floatplacement{figure}{H}
+
+% ---- Captions --------------------------------------------------------------
+\captionsetup{
+  font={small},
+  labelfont={},
+  textfont={it},
+  format=plain,
+  justification=justified,
+  singlelinecheck=false
+}
+\captionsetup[figure]{
+  name=Figure, labelsep=colon,
+  font={footnotesize,color=textsecondary},
+  labelfont={footnotesize,color=textsecondary},
+  textfont={footnotesize,it,color=textsecondary}
+}
+\captionsetup[table]{
+  name=Table, labelsep=colon,
+  font={footnotesize,color=textsecondary},
+  labelfont={footnotesize,color=textsecondary},
+  textfont={footnotesize,it,color=textsecondary},
+  skip=2pt,
+}
+
+% ---- Links -----------------------------------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=accentmuted,
+  urlcolor=accentmuted,
+  citecolor=accentmuted,
+  pdfborder={0 0 0}
+}
+
+% ---- Lists -----------------------------------------------------------------
+\setlist{
+  topsep=\mslisttopsep,
+  itemsep=\mslistitemsep,
+  parsep=0pt,
+  leftmargin=\mslistindent
+}
+\setlist[itemize,1]{label=\mslistmarkerone}
+\setlist[itemize,2]{label=\mslistmarkertwo, leftmargin=\mslistsubindent}
+\setlist[enumerate,1]{label=\arabic*.}
+\setlist[enumerate,2]{label=\alph*., leftmargin=\mslistsubindent}
+
+% ---- Block quotes (reuse callout visuals) ----------------------------------
+\newtcolorbox{quotebox}{
+  enhanced, breakable, boxrule=0pt, frame hidden,
+  borderline west={\mscalloutborder}{0pt}{ruletable},
+  colback=calloutbg,
+  coltext=textsecondary,
+  left=\mscalloutpadx, right=\mscalloutpadx,
+  top=\mscalloutpady, bottom=\mscalloutpady,
+  before skip=\mscalloutbefore, after skip=\mscalloutafter,
+  fontupper=\fontsize{\msfontbody}{\msfontbodylh}\selectfont\itshape
+}
+\renewenvironment{quote}{\begin{quotebox}}{\end{quotebox}}
+
+% ---- Footnotes (horizontal pills in the footer) ----------------------------
+\renewcommand{\footnoterule}{}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\renewcommand{\footnotesize}{\fontsize{\msfontheader}{\msfontheaderlh}\selectfont}
+
+\newcommand{\msfootpill}[2]{%
+  {\fboxsep=2pt
+   \colorbox{footnotebg}{%
+     \textcolor{accentprimary}{#1}\hspace{3pt}\textcolor{textsecondary}{#2}%
+   }}%
+}
+
+\newcommand{\msfootnotebuffer}{}
+
+\makeatletter
+\renewcommand{\footnote}[1]{%
+  \stepcounter{footnote}%
+  \textsuperscript{\textcolor{accentprimary}{\thefootnote}}%
+  \protected@xdef\msfootnotebuffer{\msfootnotebuffer
+    \noexpand\msfootpill{\thefootnote}{\unexpanded{#1}}%
+    \noexpand\hspace{\noexpand\msfootgap}}%
+}
+\makeatother
+
+\newcommand{\msrenderfootnotes}{\msfootnotebuffer}
+
+\AtBeginShipout{\gdef\msfootnotebuffer{}}
+
+% Counter for tables without captions (Pandoc generates \LTcaptype{none})
+\newcounter{none}
+
+% Horizontal rule
+\renewcommand{\hrulefill}{%
+  \leavevmode\leaders\hbox{\rule[0.5ex]{\linewidth}{\msrulethin}}\hfill\kern0pt%
+}
+
+% CSL references
+$if(csl-refs)$
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newenvironment{CSLReferences}[2]{}{}
+$endif$
+
+% =============================================================================
+% DOCUMENT
+% =============================================================================
+
+\begin{document}
+
+$if(ms_cover_centered_ascii)$
+\thispagestyle{firstpage}
+\null\vfill
+
+$for(include-before)$
+\begin{center}
+\begin{varwidth}{\textwidth}
+$include-before$
+\end{varwidth}
+\end{center}
+$endfor$
+
+\vfill
+
+{\fontsize{\msfontcovertitle}{\msfontcovertitlelh}\selectfont\bfseries $title$\par}
+{\fontsize{\msfontcovermeta}{\msfontcovermetalh}\selectfont\color{textsecondary}%
+$if(author)$$author$ · $endif$v$version$$if(date)$ · $date$$endif$\par}
+
+$if(ms_toc_include)$
+\tableofcontents
+\thispagestyle{firstpage}
+$endif$
+
+\vspace{6em}
+\newpage
+$endif$
+
+$if(ms_cover_title_top)$
+\thispagestyle{firstpage}
+{\fontsize{\msfontcovertitle}{\msfontcovertitlelh}\selectfont\bfseries $title$\par}
+\vspace{\msspacemd}
+{\fontsize{\msfontcovermeta}{\msfontcovermetalh}\selectfont\color{textsecondary}%
+$if(author)$$author$ · $endif$v$version$$if(date)$ · $date$$endif$\par}
+
+\vspace{\msspacexl}
+
+$for(include-before)$
+\begin{varwidth}{\textwidth}
+$include-before$
+\end{varwidth}
+$endfor$
+
+\vfill
+
+$if(ms_toc_include)$
+\tableofcontents
+\thispagestyle{firstpage}
+$endif$
+\newpage
+$endif$
+
+$if(ms_cover_none)$
+$if(ms_toc_include)$
+\tableofcontents
+\newpage
+$endif$
+$endif$
+
+$body$
+
+\end{document}

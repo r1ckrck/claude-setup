@@ -2,6 +2,28 @@
 
 Complete guide to media format support, codec recommendations, and conversion best practices.
 
+## Minimum Versions Required
+
+| Format | ffmpeg | ImageMagick | Notes |
+|---|---|---|---|
+| H.264 | ≥3.0 | n/a | Universal |
+| H.265 | ≥3.0 | n/a | libx265 must be linked |
+| VP9 | ≥3.0 | n/a | libvpx must be linked |
+| AV1 | ≥4.4 (libaom-av1), ≥5.0 (libsvtav1 — recommended) | n/a | |
+| AVIF | n/a | ≥7.1 | + libheif ≥1.12 + libaom |
+| HEIC | n/a | ≥7.0 | + libheif ≥1.12 |
+| Animated WebP | n/a | ≥7.0 | |
+| APNG | n/a | ≥6.9 | |
+| ProRes (all profiles) | ≥4.0 | n/a | Use `prores_ks` encoder for spec-correct output |
+| DNxHR HQ/SQ/LB | ≥3.4 | n/a | Wrapped in MXF or MOV |
+| FFV1 (lossless) | ≥3.0 | n/a | Archival use |
+
+Verify in your build:
+```bash
+ffmpeg -encoders 2>/dev/null | grep -E 'libx264|libx265|libaom|libsvtav1|prores|dnxhd|ffv1'
+magick -list format | grep -E 'AVIF|HEIC|WEBP|APNG'
+```
+
 ## Image Format Support
 
 ### ImageMagick Formats
@@ -23,9 +45,13 @@ Complete guide to media format support, codec recommendations, and conversion be
 - SVG (.svg) - Read only, converts to raster
 - PDF (.pdf) - Read/write, may have policy restrictions
 
+**Modern Formats (require recent ImageMagick + delegates):**
+- HEIC (.heic) - Apple format, requires libheif ≥1.12 (IM ≥7.0)
+- AVIF (.avif) - Next-gen, requires libheif ≥1.12 with libaom (IM ≥7.1)
+- Animated WebP (.webp) - Multi-frame, requires IM ≥7.0
+- APNG (.png) - Animated PNG, requires IM ≥6.9
+
 **Other Formats:**
-- HEIC (.heic) - Apple format, requires libheif
-- AVIF (.avif) - Next-gen, requires libavif
 - PSD (.psd) - Photoshop, basic support
 
 ### FFmpeg Image Support
@@ -43,17 +69,15 @@ Complete guide to media format support, codec recommendations, and conversion be
 ### Container Formats
 
 **Universal Containers:**
-- MP4 (.mp4) - Most compatible, streaming
+- MP4 (.mp4) - Most compatible, web delivery
 - MKV (.mkv) - Feature-rich, flexible
 - WebM (.webm) - Web-optimized, open
 - AVI (.avi) - Legacy, broad support
 - MOV (.mov) - Apple, professional
 
-**Streaming Containers:**
-- TS (.ts) - Transport stream, HLS segments
-- M3U8 (.m3u8) - HLS playlist
-- MPD (.mpd) - DASH manifest
+**Legacy / Special-Purpose:**
 - FLV (.flv) - Flash (legacy)
+- TS (.ts) - MPEG transport stream (broadcast / DVR)
 
 **Professional Formats:**
 - ProRes (.mov) - Apple professional
@@ -74,9 +98,16 @@ Complete guide to media format support, codec recommendations, and conversion be
 - VP8 (libvpx) - WebM predecessor
 
 **Professional Codecs:**
-- ProRes (prores) - Apple post-production
-- DNxHD (dnxhd) - Avid editing
+- ProRes 422 (prores) - Apple post-production, ffmpeg ≥4.0 (use `-c:v prores_ks -profile:v 2`)
+- ProRes 422 HQ - High-quality post (`-profile:v 3`)
+- ProRes 4444 - Highest quality with alpha (`-profile:v 4`)
+- ProRes 4444 XQ - Extreme quality (`-profile:v 5`)
+- DNxHD (dnxhd) - Avid editing, fixed bitrates only
+- DNxHR HQ (dnxhd via mxf) - Avid HQ, ffmpeg ≥3.4
+- DNxHR SQ (dnxhd) - Avid SQ
+- DNxHR LB (dnxhd) - Avid LB (low bandwidth)
 - Uncompressed (rawvideo) - Maximum quality
+- FFV1 (ffv1) - Lossless intermediate, archival
 
 ### Audio Codecs
 
@@ -105,13 +136,12 @@ Complete guide to media format support, codec recommendations, and conversion be
 | Web transparency | PNG | - | - | - |
 | Web modern | WebP | WebM | VP9 | Opus |
 | Social media | JPEG 85% | MP4 | H.264 | AAC 128k |
-| 4K streaming | - | MP4 | H.265 | AAC 192k |
+| 4K delivery | - | MP4 | H.265 | AAC 192k |
 | Archive | PNG/TIFF | MKV | H.265 CRF 18 | FLAC |
 | Email | JPEG 75% | - | - | - |
 | Print | TIFF/PNG | - | - | - |
 | YouTube | - | MP4/WebM | H.264/VP9 | AAC/Opus |
-| Live stream | - | FLV | H.264 | AAC |
-| Editing | - | MOV/MXF | ProRes/DNxHD | PCM |
+| Editing | - | MOV/MXF | ProRes/DNxHR | PCM |
 
 ### Platform Compatibility
 

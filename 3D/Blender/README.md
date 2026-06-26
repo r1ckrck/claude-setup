@@ -29,7 +29,7 @@ Drop `mcp.json.example` into the project root as `.mcp.json`:
   "mcpServers": {
     "blender": {
       "command": "uv",
-      "args": ["--directory", "/Users/r1ckrck/blender_mcp/mcp", "run", "blender-mcp"]
+      "args": ["--directory", "/Users/YOUR_USER/blender_mcp/mcp", "run", "blender-mcp"]
     }
   }
 }

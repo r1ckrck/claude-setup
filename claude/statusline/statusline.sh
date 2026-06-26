@@ -8,35 +8,31 @@ export LC_ALL=en_US.UTF-8
 
 input=$(cat)
 
-IFS=$'\x1f' read -r model model_id cwd transcript cost api_ms p5h r5h p7d r7d <<<"$(printf '%s' "$input" | jq -r '[
+IFS=$'\x1f' read -r model model_id cwd cost api_ms p5h r5h p7d r7d ctx_pct cu_in cu_cr cu_cc effort <<<"$(printf '%s' "$input" | jq -r '[
   (.model.display_name // .model.id // "?"),
   (.model.id // ""),
   (.workspace.current_dir // .cwd // "."),
-  (.transcript_path // ""),
   ((.cost.total_cost_usd // 0) | tostring),
   ((.cost.total_api_duration_ms // 0) | tostring),
   ((.rate_limits.five_hour.used_percentage // "") | tostring),
   ((.rate_limits.five_hour.resets_at // "") | tostring),
   ((.rate_limits.seven_day.used_percentage // "") | tostring),
-  ((.rate_limits.seven_day.resets_at // "") | tostring)
+  ((.rate_limits.seven_day.resets_at // "") | tostring),
+  ((.context_window.used_percentage // "") | tostring),
+  ((.context_window.current_usage.input_tokens // 0) | tostring),
+  ((.context_window.current_usage.cache_read_input_tokens // 0) | tostring),
+  ((.context_window.current_usage.cache_creation_input_tokens // 0) | tostring),
+  (.effort.level // "")
 ] | join("\u001f")')"
 
-# Context window.
-if [[ "$model_id" == *"[1m]"* ]]; then window=1000000; else window=200000; fi
+# Context % — straight from the payload (authoritative); strip any fraction.
+ctx_pct=${ctx_pct%.*}
 
-# Context % + cache hit rate.
-ctx_pct=""; cache_pct=""
-if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-  last=$(tail -n 400 "$transcript" 2>/dev/null | grep -F '"usage"' | tail -n 1)
-  if [ -n "$last" ]; then
-    IFS=$'\t' read -r in_tok cr cc <<<"$(printf '%s' "$last" | jq -r '.message.usage | [(.input_tokens // 0), (.cache_read_input_tokens // 0), (.cache_creation_input_tokens // 0)] | @tsv' 2>/dev/null)"
-    in_tok=${in_tok:-0}; cr=${cr:-0}; cc=${cc:-0}
-    total=$((in_tok + cr + cc))
-    if [ "$total" -gt 0 ]; then
-      ctx_pct=$((total * 100 / window))
-      cache_pct=$((cr * 100 / total))
-    fi
-  fi
+# Cache hit rate — share of the last turn's input tokens served from cache.
+cache_pct=""
+total=$((cu_in + cu_cr + cu_cc))
+if [ "$total" -gt 0 ]; then
+  cache_pct=$((cu_cr * 100 / total))
 fi
 
 # Git info.
@@ -56,19 +52,7 @@ fi
 
 short_cwd="${cwd/#$HOME/~}"
 
-# Effort level.
-effort=""
-if [ -n "$transcript" ] && [ -f "$transcript" ]; then
-  effort=$(tail -n 400 "$transcript" 2>/dev/null \
-    | jq -r 'select(.type == "user"
-                    and (.message.content | type == "string")
-                    and (.message.content | contains("<local-command-stdout>Set model to")))
-             | .message.content' 2>/dev/null \
-    | sed $'s/\033\\[[0-9;]*m//g' \
-    | grep -oE 'with (low|medium|high|xhigh|max) effort' \
-    | tail -n 1 \
-    | grep -oE '(low|medium|high|xhigh|max)')
-fi
+# Effort level — from the payload; fall back to settings.json if absent.
 if [ -z "$effort" ]; then
   settings_path="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
   if [ -f "$settings_path" ]; then

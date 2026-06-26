@@ -75,7 +75,7 @@ For iTerm2 / Terminal.app / other terminals, set the profile font to the same ne
 
 **Dirty state**: if the working tree has uncommitted changes, the entire git segment's background turns **red**.
 
-**Effort tiers** (values from `/effort` or `/model`; resolved from transcript → settings.json):
+**Effort tiers** (values from `/effort` or `/model`; read from the payload, with settings.json as fallback):
 
 | Tier | Look | Meaning |
 |------|------|---------|
@@ -99,7 +99,7 @@ Each tier uses a **distinct hue** so the effort level is recognizable at a glanc
 | Element | Meaning |
 |---------|---------|
 |  cache % | % of input tokens served from Anthropic's prompt cache on the last turn. Higher = cheaper / faster. |
-| 󰚋 ctx bar % | % of the context window filled. 200k or 1M window, detected from the model ID. |
+| 󰚋 ctx bar % | % of the context window filled. Read straight from Claude Code's own context tracking, so it matches `/context`. |
 |  5h bar % ↻ | Usage against Anthropic's 5-hour rolling quota + time until it resets. |
 |  7d bar % ↻ | Usage against Anthropic's 7-day quota + time until it resets. |
 |  api | Total time Claude Code spent waiting on API responses this session. |
@@ -126,17 +126,16 @@ Claude Code pipes a JSON payload to the script's `stdin` on every refresh. Key f
 
 - `model.display_name`, `model.id` — model pill
 - `workspace.current_dir` — folder segment
-- `transcript_path` — parsed for last-turn usage (ctx %, cache hit %)
+- `context_window.used_percentage` — context % (matches Claude's own `/context`)
+- `context_window.current_usage.{input_tokens, cache_read_input_tokens, cache_creation_input_tokens}` — cache hit %
+- `effort.level` — effort pill
 - `cost.total_cost_usd`, `cost.total_api_duration_ms` — cost + API wait
 - `rate_limits.five_hour.{used_percentage, resets_at}` — 5h quota
 - `rate_limits.seven_day.{used_percentage, resets_at}` — 7d quota
 
-`rate_limits` are populated by Claude Code itself (server-authoritative) — no third-party usage tool needed.
+`rate_limits` and `context_window` are populated by Claude Code itself (server-authoritative) — no third-party usage tool needed. Reading these directly means the numbers always match what Claude Code shows internally, rather than being re-derived from the transcript.
 
-**Effort level** isn't in the stdin payload. The script resolves it from two sources:
-
-1. **Session transcript** (`transcript_path`) — the most recent `Set model to … with <level> effort` line.
-2. **`~/.claude/settings.json`** (`effortLevel`) — used when the transcript has no in-session change. Respects `$CLAUDE_CONFIG_DIR`.
+**Effort level** comes from the payload's `effort.level`, which always reflects the current `/effort` tier. If it's absent (older Claude Code, or effort unset), the script falls back to `~/.claude/settings.json` (`effortLevel`, respects `$CLAUDE_CONFIG_DIR`).
 
 ## Performance
 
@@ -160,7 +159,7 @@ Common tweaks in `statusline.sh`:
 |---------|-----|
 | Icons show as `□` | Terminal font isn't a nerd font. Install and configure one (see Requirements). |
 | No 5h / 7d segments | Usage data isn't populated until the first assistant response in the session. Send a message, it'll appear. Also won't appear for API-key-only or Bedrock/Vertex setups. |
-| No context %, no cache % | Requires at least one assistant turn in the session so the transcript has a `usage` entry. |
+| No context %, no cache % | Requires at least one assistant turn so Claude Code populates `context_window`. |
 | Statusline doesn't show at all | Confirm the `statusLine` block is in `~/.claude/settings.json` and the script path is correct. Try running the script manually with a dummy JSON: `echo '{}' \| bash ~/.claude/statusline.sh`. |
 | Colors are wrong / gray | Terminal might not support 16-color ANSI. Nearly all modern terminals do — check terminal settings. |
 

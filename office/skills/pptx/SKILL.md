@@ -12,6 +12,7 @@ description: "Use this skill any time a .pptx file is involved in any way — as
 | Read/analyze content | `python -m markitdown presentation.pptx` |
 | Edit or create from template | Read [editing.md](editing.md) |
 | Create from scratch | Read [pptxgenjs.md](pptxgenjs.md) |
+| Add animations or transitions | Read [animation.md](animation.md) |
 
 ---
 
@@ -142,6 +143,16 @@ Choose colors that match your topic — don't default to generic blue. Use these
 **Assume there are problems. Your job is to find them.**
 
 Your first render is almost never correct. Approach QA as a bug hunt, not a confirmation step. If you found zero issues on first inspection, you weren't looking hard enough.
+
+### Structural validation (required after any XML/animation edit)
+
+**PowerPoint silently "repairs" XML that LibreOffice and python-pptx open fine** — stripping content (especially animations) without warning. A clean LibreOffice render proves nothing. Validate against the bundled OOXML schema, the same check PowerPoint runs at open:
+
+```bash
+python scripts/office/validate.py output.pptx --original source.pptx
+```
+
+`--original` reports only NEW errors. **Fix every `ppt/slides/*` error before delivering.** Benign noise to ignore: `authors.xml`, `revisionInfo.xml`, `modernComment_*` (Microsoft-extension parts absent from the ISO schema). `pack.py` runs this automatically; if you edited with python-pptx (or any tool that bypasses `pack.py`), run `validate.py` explicitly.
 
 ### Content QA
 
