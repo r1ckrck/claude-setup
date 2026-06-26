@@ -1,0 +1,162 @@
+# =============================================================================
+# Markset Default Theme
+# Every formula lives here. Lua is a dumb interpreter — it walks these tables
+# and multiplies. To change how a value is computed, edit the YAML.
+# See themes/SCHEMA.md for field-by-field reference.
+# =============================================================================
+
+theme:
+
+  # ===== Type =====
+  type:
+    base:  10pt            # body size — everything scales from here
+    scale: 1.2            # heading ratio — see size_exponents
+
+    # Heading sizes: size = base × scale^exponent
+    size_exponents:
+      h1: 2
+      h2: 1
+      h3: 0
+      h4: 0
+
+    # Non-heading sizes: size = base × factor
+    size_factors:
+      caption:     0.9
+      code:        0.9
+      inline_code: 0.9
+      header:      0.8
+      line_number: 0.6
+      cover_meta:  0.9
+      ascii_cover: 1.2
+      ascii_body:  1.0
+      toc_entry:   1.0
+      # cover_title inherits h1; toc_title inherits h2
+
+    # Line-height: size × leading, per role
+    leading:
+      body:        1.4
+      h1:          1.2
+      h2:          1.2
+      h3:          1.2
+      h4:          1.4    # matches body — h4 reads like body with bold weight
+      caption:     1.4
+      code:        1.4
+      inline_code: 1.4
+      header:      1.4
+      line_number: 1.4
+      cover_title: 1.2
+      cover_meta:  1.4
+      ascii_cover: 1.4
+      ascii_body:  1.4
+      toc_title:   1.2
+      toc_entry:   1.4
+
+  # ===== Rhythm =====
+  rhythm:
+    base: 4pt              # spacing unit — all block rhythm scales from here
+
+    heading:
+      space:             4    # h1_before = base × space
+      step:              0.7  # each level × step of previous
+      content_proximity: 0.4  # heading_after = heading_before × this
+
+    block:
+      before: 1.0          # × base, applies to callout / code / table
+
+    callout:
+      after: 2.5
+      pad_y: 2
+      pad_x: 3
+    code:
+      after: 2.5
+      pad_x: 3
+    table:
+      after:       2.5
+      col_sep:     2
+      row_stretch: 1.45    # arraystretch ratio (absolute, not × base)
+    list:
+      top_sep:  1.0
+      item_sep: 1.25
+    image_placeholder:
+      space: 2             # before / after
+    split:
+      gutter: 4            # × base, horizontal space between columns in split-* divs
+    footnote:
+      gap: 1               # × base, horizontal gap between footnote pills in the footer
+
+  # ===== Palette — chosen values =====
+  palette:
+    page:        { bg: "#faf7f2", fg: "#181826" }
+    surface:     { bg: "#f4f0e8" }
+    code:        { bg: "#f0ece4" }
+    placeholder: { bg: "#ece8e0", border: "#c4c0b6" }
+    text:        { primary: "#181826", secondary: "#3d3d4d", tertiary: "#5d5d6d" }
+    accent:      { primary: "#ca9ee6", muted: "#a080c0" }
+    rule:        { table: "#d4d0c6" }
+    footnote:    { bg: "{{surface.bg}}" }
+    callout:
+      note:      { border: "#8d8d9d",            glyph: "[i]" }
+      tip:       { border: "{{accent.primary}}", glyph: "*"   }
+      warning:   { border: "#d4a574",            glyph: "[!]" }
+      important: { border: "{{accent.muted}}",   glyph: "[*]" }
+    syntax:
+      string:  "{{accent.muted}}"
+      comment: "{{text.tertiary}}"
+      number:  "{{text.secondary}}"
+
+  # ===== Fonts =====
+  fonts:
+    main:
+      family: Inter
+      weights:
+        regular:    "-Regular"
+        bold:       "-SemiBold"
+        italic:     "-Italic"
+        bolditalic: "-SemiBoldItalic"
+    mono:
+      family: JetBrainsMono
+      scale:  0.9
+      weights:
+        regular:    "-Regular"
+        bold:       "-Bold"
+        italic:     "-Italic"
+        bolditalic: "-BoldItalic"
+
+  # ===== Absolutes — independent of rhythm =====
+  page:
+    margin: { top: 20mm, bottom: 15mm, left: 12.5mm, right: 12.5mm }
+    header: { height: 12pt, sep: 6pt }
+    footer: { skip: 10pt }
+
+  rules:
+    thin:            0.5pt
+    thick:           0.75pt
+    callout_border:  3pt
+
+  list:
+    indent:     14pt
+    sub_indent: 16pt
+    marker_l1:  "•"
+    marker_l2:  "◦"
+
+  image:
+    default_width:      0.6
+    placeholder_height: 60pt
+
+  layout:
+    cover:     { style: centered-ascii }   # centered-ascii | title-top | none
+    header:    { content: title-version }  # title-version | title-only | section | none
+    toc:       { include: true, depth: 3 }
+    numbering: { scheme: arabic, h1_numbered: true }
+    tables:    { break_threshold: 12 }     # rows above which a table may break across pages
+
+  # ===== Opt-in overrides — target output token paths =====
+  overrides:
+    rhythm.h2_before: 6pt
+    rhythm.h3_before: 6pt
+  # Examples:
+  #   type.h1:                  22pt
+  #   type.body_lh:             17pt
+  #   rhythm.h2_before:         24pt
+  #   rhythm.callout_pad_x:     16pt
+  #   palette.accent.primary:   "#ff6600"

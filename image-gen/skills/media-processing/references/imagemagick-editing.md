@@ -2,6 +2,8 @@
 
 Complete guide to format conversion, resizing, effects, transformations, and composition.
 
+> **Modern formats** (AVIF, HEIC, animated WebP, APNG) and **ICC profile preservation** have their own reference: `references/imagemagick-modern-formats.md`.
+
 ## Format Conversion
 
 ### Basic Conversion
@@ -19,6 +21,23 @@ magick input.png output.jpg output.webp output.gif
 
 # Convert with quality setting
 magick input.png -quality 85 output.jpg
+
+# JPEG to HEIC / AVIF (modern formats)
+magick input.jpg output.heic
+magick input.jpg -quality 60 output.avif
+```
+
+### ICC Profile Handling
+
+```bash
+# Inspect embedded color profile
+magick identify -format "%[colorspace] %[profile:icc]\n" input.jpg
+
+# Convert profile (AdobeRGB to sRGB)
+magick input.jpg -profile sRGB.icc output.jpg
+
+# Strip everything except ICC profile
+magick input.jpg -define preserve-properties=icc -strip output.jpg
 ```
 
 ### Quality Settings

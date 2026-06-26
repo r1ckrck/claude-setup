@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!--
+  report-scaffold.html — HTML scaffold for the processed report PDF.
+
+  How to use:
+    1. Copy this file to the run's artifacts/ directory, renamed
+       <stem>_report.html.
+    2. Fill every <!-- FILL: ... --> block with run-specific content.
+       Delete the FILL comment after filling.
+    3. Run `.claude/skills/facilitator/render-pdf.sh <run-folder> <stem>` —
+       the script copies report-style.css next to this HTML, serves the
+       artifacts folder over http, and prints to PDF via playwright-cli.
+
+  Section structure mirrors report-scaffold.md one-to-one. Same content
+  shape in both authoring surfaces, different syntaxes.
+
+  Persona segment colour on chips + seg-dots:
+    data-segment="1" → India-1 (grey)
+    data-segment="2" → India-2 (accent orange)
+    data-segment="3" → India-3 (black)
+
+  Verdict pill classes: .pill-validate / .pill-iterate / .pill-kill
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title><!-- FILL: short title — e.g. "Ask AI pill — concept test" --></title>
+<link rel="stylesheet" href="report-style.css">
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="eyebrow">Bajaj DCX · User research</div>
+  <h1><!-- FILL: display title — short, evocative; e.g. "Ask AI pill" --></h1>
+  <div class="subtitle"><!-- FILL: subtitle — "<Test-type> · <Date>" e.g. "Concept test · 1 June 2026" --></div>
+</section>
+
+<!-- ============ HEADER CARD: metadata + stimulus ============ -->
+<section>
+  <div class="header-grid">
+    <div class="meta-list">
+      <div class="meta-item">
+        <div class="label">Test</div>
+        <div class="value"><!-- FILL: e.g. "Concept test — Ask AI pill" --></div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Stimulus</div>
+        <div class="value"><!-- FILL: short phrase — screen / URL / topic --></div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Date</div>
+        <div class="value"><!-- FILL: e.g. "1 June 2026" --></div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Protocol</div>
+        <div class="value"><!-- FILL: e.g. "Parallel + lockstep · 1 adaptive round + debrief" --></div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Run verdict</div>
+        <div class="value"><!-- FILL: e.g. "8 of 8 valid" --></div>
+      </div>
+    </div>
+    <div class="header-image">
+      <!-- FILL: stimulus image. Omit this whole <div> block for interview runs. -->
+      <img src="stimulus/<!-- FILL: filename -->" alt="<!-- FILL: short alt -->">
+    </div>
+  </div>
+
+  <div class="personas-section">
+    <div class="eyebrow" style="margin-bottom:5pt;"><!-- FILL: e.g. "8 users" --></div>
+    <div class="personas">
+      <!-- FILL: one .persona-chip per persona, in locked order:
+           Arsheen, Danish, Mohammed, Seema, Akeela, Himanshu, Salman, Sonal.
+           data-segment = 1 / 2 / 3 (India-1 / India-2 / India-3).
+           Pattern:
+      <div class="persona-chip" data-segment="2">
+        <div class="name">Name</div>
+        <div class="meta">India-X · City</div>
+      </div>
+      -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXECUTIVE SUMMARY ============ -->
+<section class="break-before">
+  <h2><!-- FILL: e.g. "Five things stakeholders should know" --></h2>
+
+  <div class="findings">
+    <!-- FILL: 3–5 .finding blocks. Each = a load-bearing observation, not a recommendation.
+         Pattern:
+    <div class="finding">
+      <div class="num">01</div>
+      <div>
+        <h3>Headline sentence — one line.</h3>
+        <p>One supporting sentence, max two. No hedges.</p>
+      </div>
+    </div>
+    -->
+  </div>
+
+  <div class="verdict-callout">
+    <div class="label">Run-level verdict</div>
+    <div class="body">
+      <!-- FILL: one sentence. Lead with <strong>VALIDATE/ITERATE/KILL</strong>. -->
+    </div>
+  </div>
+</section>
+
+<!-- ============ BINDING CONSTRAINTS TABLE ============ -->
+<section class="constraints-section">
+  <h3><!-- FILL: e.g. "Binding constraint per user" --></h3>
+  <p class="lede"><!-- FILL: one-line lede — what the table shows --></p>
+  <table class="constraints-table">
+    <thead>
+      <tr><th>User</th><th>Binding constraint</th><th>Category</th></tr>
+    </thead>
+    <tbody>
+      <!-- FILL: one row per persona, in locked order.
+           Use <span class="seg-dot seg-1|seg-2|seg-3"></span> before the name.
+           Pattern:
+      <tr>
+        <td><span class="seg-dot seg-2"></span>Name</td>
+        <td>One-line constraint.</td>
+        <td>Category</td>
+      </tr>
+      -->
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ METHOD ============ -->
+<section class="break-before">
+  <h2>Method</h2>
+  <div class="method-strip">
+    <!-- FILL: 4 .method-step blocks. Each = numbered step, h3 title, one sentence.
+         Pattern:
+    <div class="method-step">
+      <div class="num">01</div>
+      <h3>Step name</h3>
+      <p>One sentence describing what happened in this step.</p>
+    </div>
+    -->
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section>
+  <h2>The numbers</h2>
+
+  <!-- FILL: one .stat-card per chart in the cartridge's inventory.
+       Pattern:
+  <div class="stat-card">
+    <img src="charts/<chart-name>.png" alt="<short description>">
+    <div class="caption">
+      <strong>Headline number / observation.</strong>
+      <p>One supporting sentence — no over-explanation.</p>
+    </div>
+  </div>
+  -->
+</section>
+
+<!-- ============ CROSS-USER FINDINGS ============ -->
+<section>
+  <h2><!-- FILL: e.g. "What surfaced across users" --></h2>
+
+  <div class="findings-axes">
+    <!-- FILL: one .axis card per axis defined by the cartridge's findings axes.
+         Typical: concept = 4 axes (comprehension / relevance / desirability / objections).
+         Pattern:
+    <div class="axis">
+      <h3>Axis name</h3>
+      <p class="punch">One-line synthesis — the punch.</p>
+      <ul>
+        <li>Specific observation</li>
+        <li>Specific observation</li>
+        <li>Specific observation</li>
+      </ul>
+    </div>
+    -->
+  </div>
+</section>
+
+<!-- ============ PER-USER SNAPSHOTS ============ -->
+<section class="break-before">
+  <h2>What each user said</h2>
+
+  <div class="snapshots">
+    <!-- FILL: one .snapshot per persona, in locked order.
+         Each: name + segment + verdict pill + 2-sentence read + standout quote.
+         Pattern:
+    <div class="snapshot">
+      <div class="head">
+        <div>
+          <div class="name">Name</div>
+          <div class="meta">India-X · age · City</div>
+        </div>
+        <span class="pill pill-iterate">Iterate</span>
+      </div>
+      <div class="read">Two sentences. The synthesis, not the play-by-play. Ends with the load-bearing observation.</div>
+      <div class="quote">"One verbatim line that captures the snapshot."</div>
+    </div>
+    -->
+  </div>
+</section>
+
+<!-- ============ RECOMMENDATIONS ============ -->
+<section class="break-before">
+  <h2>What to build</h2>
+  <p class="muted" style="margin-bottom:8pt; font-size:9.5pt;">Each recommendation is a design move the team can ship — the personas whose data drove it are tagged below.</p>
+
+  <div class="recs">
+    <!-- FILL: numbered recommendations. Follow Recommendations discipline
+         (facilitator/SKILL.md) — design moves, never gating decisions.
+         Add class="rec adjacent" for adjacent-finding recommendations (not from the focal stimulus).
+         Pattern:
+    <div class="rec">
+      <div class="num">01</div>
+      <div>
+        <h3>Imperative one-line headline of the design move</h3>
+        <p>Two sentences — what to build, who it unblocks, why it expands options.</p>
+        <div class="tags">
+          <span class="tag">Persona</span><span class="tag">Persona</span>
+        </div>
+      </div>
+    </div>
+    -->
+  </div>
+</section>
+
+<!-- ============ RUN VERDICTS ============ -->
+<section>
+  <h2>Verdict by user</h2>
+  <p class="muted" style="font-size:9pt; margin:0 0 6pt 0;">Each user's verdict and the one-line reason behind it.</p>
+  <table class="verdicts-table">
+    <thead>
+      <tr><th>User</th><th>Run</th><th><!-- FILL: e.g. "Concept" / "Severity" --></th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <!-- FILL: one row per persona, in locked order.
+           Pattern:
+      <tr>
+        <td><span class="seg-dot seg-2"></span>Name</td>
+        <td>valid</td>
+        <td><span class="pill pill-iterate">Iterate</span></td>
+        <td>One-line reason.</td>
+      </tr>
+      -->
+    </tbody>
+  </table>
+</section>
+
+<footer>
+  Verbatim conversations and debriefs &middot; <code><!-- FILL: e.g. "2026-06-01_concept_terranova-ask-ai_transcripts.md" --></code>
+</footer>
+
+</body>
+</html>

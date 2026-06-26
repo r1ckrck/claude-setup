@@ -1,0 +1,8 @@
+pyproject.toml
+src/cadpy_metadata/__init__.py
+src/cadpy_metadata/generator.py
+src/cadpy_metadata/py.typed
+src/cadpy_metadata.egg-info/PKG-INFO
+src/cadpy_metadata.egg-info/SOURCES.txt
+src/cadpy_metadata.egg-info/dependency_links.txt
+src/cadpy_metadata.egg-info/top_level.txt

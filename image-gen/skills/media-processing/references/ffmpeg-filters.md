@@ -394,41 +394,7 @@ ffmpeg -i input.mp4 \
   -map 0:a -c:a copy
 ```
 
-### Picture-in-Picture
-Overlay small video on main video.
-
-```bash
-ffmpeg -i main.mp4 -i small.mp4 \
-  -filter_complex "[1:v]scale=320:180[pip]; \
-    [0:v][pip]overlay=W-w-10:H-h-10" \
-  output.mp4
-```
-
-### Side-by-Side Comparison
-Compare two videos.
-
-```bash
-# Horizontal
-ffmpeg -i left.mp4 -i right.mp4 \
-  -filter_complex "[0:v][1:v]hstack=inputs=2" \
-  output.mp4
-
-# Vertical
-ffmpeg -i top.mp4 -i bottom.mp4 \
-  -filter_complex "[0:v][1:v]vstack=inputs=2" \
-  output.mp4
-```
-
-### Crossfade Transition
-Smooth transition between videos.
-
-```bash
-ffmpeg -i video1.mp4 -i video2.mp4 \
-  -filter_complex "[0:v][1:v]xfade=transition=fade:duration=2:offset=8" \
-  output.mp4
-```
-
-**Transition types:** fade, wipeleft, wiperight, wipeup, wipedown, slideleft, slideright, slideup, slidedown, circlecrop, rectcrop, distance, fadeblack, fadewhite, radial, smoothleft, smoothright, smoothup, smoothdown
+> **Layout / compositing recipes** (Picture-in-Picture, hstack/vstack/xstack grids, chromakey, xfade transitions, concat) live in `references/ffmpeg-composition.md`.
 
 ### Color Correction Pipeline
 Professional color grading.

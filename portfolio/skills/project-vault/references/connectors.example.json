@@ -1,0 +1,26 @@
+{
+  "connectors": {
+    "localfs": {
+      "enabled": false,
+      "roots": ["~/path/to/your/projects"],
+      "exclude": []
+    },
+    "github": {
+      "enabled": false,
+      "user": "your-github-username",
+      "limit": 300
+    },
+    "figma": {
+      "enabled": false,
+      "team_id": "TEAM_ID_DIGITS",
+      "team_name": "Your Team Name",
+      "handle": "Your Name",
+      "recon_path": ".claude/skills/figma-recon/scripts/figma_recon.py",
+      "cache_dir": null
+    },
+    "webfetch": {
+      "enabled": false,
+      "urls": ["https://your-site.example"]
+    }
+  }
+}

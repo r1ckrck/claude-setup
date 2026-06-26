@@ -1,0 +1,16 @@
+.claude/
+.venv/
+__pycache__/
+*.pyc
+*.stl
+*.3mf
+*_preview.png
+!docs/*
+press/
+
+# Example models (not part of the skill)
+iphone12_case.py
+magsafe_stand.py
+phone_stand.py
+geometric_planter.py
+velux_wand.py

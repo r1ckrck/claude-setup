@@ -1,11 +1,13 @@
 ---
 name: media-processing
-description: Process multimedia files with FFmpeg (video/audio encoding, conversion, streaming, filtering, hardware acceleration) and ImageMagick (image manipulation, format conversion, batch processing, effects, composition). Use when converting media formats, encoding videos with specific codecs (H.264, H.265, VP9), resizing/cropping images, extracting audio from video, applying filters and effects, optimizing file sizes, creating streaming manifests (HLS/DASH), generating thumbnails, batch processing images, creating composite images, or implementing media processing pipelines. Supports 100+ formats, hardware acceleration (NVENC, QSV), and complex filtergraphs.
+description: Process multimedia files with FFmpeg and ImageMagick. Use when converting between video / audio / image formats, encoding with specific codecs (H.264, H.265, VP9, AV1, ProRes, DNxHR), resizing or cropping images, extracting or mixing audio, applying filters and effects, burning in or extracting subtitles, applying LUTs and color grading, tone-mapping HDR to SDR, converting to modern formats (AVIF, HEIC, animated WebP, APNG), two-pass encoding with GOP / profile / codec-specific control, compositing videos (picture-in-picture, hstack, vstack, grid, chromakey, xfade transitions, concat), audio mastering (EBU R128 loudnorm, silence detection, reverb, chorus, audio crossfade), reading or writing metadata (EXIF, ID3, IPTC, XMP, GPS, copyright, chapters), stripping metadata for privacy, scene detection, histogram and signalstats analysis, motion estimation, blackdetect / freezedetect QC, generating thumbnails, batch processing, hardware-accelerated encoding (NVENC / QuickSync / VideoToolbox), or implementing media-processing pipelines. Supports 100+ formats and complex filtergraphs.
 ---
 
 # Media Processing Skill
 
-Process video, audio, and images using FFmpeg and ImageMagick command-line tools for conversion, optimization, streaming, and manipulation tasks.
+Process video, audio, and images using FFmpeg and ImageMagick command-line tools for conversion, optimization, and manipulation tasks.
+
+This skill is a **command-reference**: each operation is a bash recipe. It does not generate AI media (see sibling skill `fal-image` for that), and it does not give styling or aesthetic guidance — only the commands needed to operate FFmpeg and ImageMagick. The skill is self-contained — copy `.claude/skills/media-processing/` into any project to use it. No external documentation references; everything the skill needs is in this folder. Sibling skills (`fal-image`, future `fal-video` and `gif-maker`) may chain to this skill for post-processing — for example, `gif-maker` calls `fal-video` to produce a source clip, then routes the file here for ffmpeg-based palette generation and dithering.
 
 ## When to Use This Skill
 
@@ -14,7 +16,6 @@ Use when:
 - Encoding video with codecs (H.264, H.265, VP9, AV1)
 - Processing images (resize, crop, effects, watermarks)
 - Extracting audio from video
-- Creating streaming manifests (HLS/DASH)
 - Generating thumbnails and previews
 - Batch processing media files
 - Optimizing file sizes and quality
@@ -27,7 +28,6 @@ Use when:
 Use FFmpeg for:
 - Video encoding, conversion, transcoding
 - Audio extraction, conversion, mixing
-- Live streaming (RTMP, HLS, DASH)
 - Video filters (scale, crop, rotate, overlay)
 - Hardware-accelerated encoding
 - Media file inspection (ffprobe)
@@ -55,8 +55,17 @@ Use ImageMagick for:
 | Batch images | ImageMagick | mogrify for in-place edits |
 | Video thumbnails | FFmpeg | Frame extraction built-in |
 | GIF creation | FFmpeg or ImageMagick | FFmpeg for video source, ImageMagick for images |
-| Streaming | FFmpeg | Live streaming protocols |
 | Image effects | ImageMagick | Rich filter library |
+| Burn-in subtitles | FFmpeg | Native libass styling |
+| Extract / convert subtitles | FFmpeg | Stream mapping built-in |
+| LUT color grading | FFmpeg | `lut3d` filter, `.cube` support |
+| HDR tone-mapping | FFmpeg | `zscale` + `tonemap` |
+| AVIF / HEIC encode | ImageMagick | libheif + libaom delegates |
+| ProRes / DNxHR | FFmpeg | Native pro-codec support |
+| Animated WebP / APNG | ImageMagick | Frame-sequence assembly |
+| Strip metadata | FFmpeg or exiftool | Privacy / web optimization |
+| Scene detection | FFmpeg | `select=scene` filter |
+| Loudness mastering | FFmpeg | EBU R128 `loudnorm` |
 
 ## Installation
 
@@ -89,6 +98,41 @@ magick -version
 # or
 convert -version
 ```
+
+## Pre-Flight (For Modern Capabilities)
+
+Before using subtitles, color grading, modern formats, audio effects, or metadata recipes, verify your build supports them.
+
+```bash
+# Subtitle burn-in needs libass
+ffmpeg -filters 2>/dev/null | grep -E 'subtitles|ass'
+
+# AVIF / HEIC need libheif (+ libaom for AVIF)
+magick -list format | grep -E 'AVIF|HEIC'
+
+# ProRes / DNxHR
+ffmpeg -encoders 2>/dev/null | grep -E 'prores|dnxhd'
+
+# LUTs (lut3d filter)
+ffmpeg -filters 2>/dev/null | grep lut3d
+
+# EBU R128 loudness
+ffmpeg -filters 2>/dev/null | grep loudnorm
+
+# exiftool (image EXIF / IPTC / XMP — ffmpeg cannot write these)
+which exiftool || echo "Install: brew install exiftool"
+
+# SoX (better-quality audio effects than ffmpeg native)
+which sox || echo "Install: brew install sox"
+```
+
+**Minimum versions:**
+- ffmpeg ≥5.0 (AV1 SVT, modern tone-mapping)
+- ImageMagick ≥7.1 (HEIC + AVIF)
+- libheif ≥1.12
+- exiftool ≥12.0
+
+If a check fails, reinstall the missing tool (modern Homebrew bundles delegates by default): `brew install ffmpeg imagemagick libheif exiftool sox`.
 
 ## Quick Start Examples
 
@@ -140,21 +184,68 @@ mogrify -path ./output -resize 800x600 *.jpg
 ffmpeg -ss 00:00:05 -i video.mp4 -vframes 1 -vf scale=320:-1 thumb.jpg
 ```
 
-### HLS Streaming
-```bash
-# Generate HLS playlist
-ffmpeg -i input.mp4 \
-  -c:v libx264 -preset fast -crf 22 -g 48 \
-  -c:a aac -b:a 128k \
-  -f hls -hls_time 6 -hls_playlist_type vod \
-  playlist.m3u8
-```
-
 ### Image Watermark
 ```bash
 # Add watermark to corner
 magick input.jpg watermark.png -gravity southeast \
   -geometry +10+10 -composite output.jpg
+```
+
+### Burn-In Subtitles
+```bash
+ffmpeg -i video.mp4 -vf "subtitles=subs.srt" -c:a copy output.mp4
+```
+
+### Apply LUT (Color Grade)
+```bash
+ffmpeg -i input.mp4 -vf "lut3d=cinematic.cube" -c:a copy output.mp4
+```
+
+### Convert To AVIF
+```bash
+magick input.jpg -quality 60 output.avif
+```
+
+### Convert To HEIC
+```bash
+magick input.jpg -quality 80 output.heic
+```
+
+### Two-Pass Encoding (Target File Size)
+```bash
+ffmpeg -y -i input.mp4 -c:v libx264 -b:v 2M -pass 1 -an -f null /dev/null
+ffmpeg -i input.mp4 -c:v libx264 -b:v 2M -pass 2 -c:a aac output.mp4
+```
+
+### Concat Without Re-encoding
+```bash
+# list.txt contains lines like: file 'clip1.mp4'
+ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
+```
+
+### Side-By-Side Comparison
+```bash
+ffmpeg -i left.mp4 -i right.mp4 \
+  -filter_complex "[0:v][1:v]hstack=inputs=2[v]" \
+  -map "[v]" -c:v libx264 compare.mp4
+```
+
+### Strip Metadata For Privacy
+```bash
+# Video / audio
+ffmpeg -i input.mp4 -map_metadata -1 -c copy clean.mp4
+# Image (preserve orientation + ICC)
+exiftool -all= -tagsfromfile @ -Orientation -ICC_Profile -overwrite_original photo.jpg
+```
+
+### Loudness Normalize (EBU R128)
+```bash
+ffmpeg -i input.mp3 -af "loudnorm=I=-16:TP=-1:LRA=11" output.mp3
+```
+
+### Scene Detect + Extract Thumbnails
+```bash
+ffmpeg -i video.mp4 -vf "select='gt(scene,0.4)',scale=320:-1" -vsync vfr scene_%03d.jpg
 ```
 
 ## Common Workflows
@@ -200,6 +291,54 @@ ffmpeg -i input.mp4 -vf "fps=15,scale=640:-1:flags=lanczos,split[s0][s1];[s0]pal
 ```bash
 # Gaussian blur
 magick input.jpg -gaussian-blur 0x8 output.jpg
+```
+
+### Subtitled Clip For Social
+```bash
+# Translate subs externally, then burn in with consistent style
+ffmpeg -i clip.mp4 -vf "subtitles=translated.srt:force_style='Fontname=Helvetica Bold,Fontsize=28,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=3,Alignment=2,MarginV=60'" -c:v libx264 -crf 20 -c:a copy social.mp4
+```
+
+### Color-Grade Pipeline
+```bash
+# LUT + curves + saturation + vignette in one chain
+ffmpeg -i input.mp4 -vf \
+  "lut3d=cinematic.cube,curves=preset=medium_contrast,eq=saturation=1.05,vignette=PI/5" \
+  -c:v libx264 -crf 20 -c:a copy graded.mp4
+```
+
+### Greenscreen Composite
+```bash
+ffmpeg -stream_loop -1 -i background.mp4 -i fg_greenscreen.mp4 \
+  -filter_complex "[1:v]chromakey=0x00FF00:0.1:0.05[ckout];[0:v][ckout]overlay[v]" \
+  -map "[v]" -map 1:a -shortest -c:v libx264 output.mp4
+```
+
+### Multi-Clip Montage With xfade + Audio Crossfade
+```bash
+ffmpeg -i clip1.mp4 -i clip2.mp4 -i clip3.mp4 \
+  -filter_complex \
+    "[0:v][1:v]xfade=fade:1:5[v01]; \
+     [v01][2:v]xfade=fade:1:11[v]; \
+     [0:a][1:a]acrossfade=d=1[a01]; \
+     [a01][2:a]acrossfade=d=1[a]" \
+  -map "[v]" -map "[a]" -c:v libx264 -c:a aac montage.mp4
+```
+
+### Podcast Audio Mastering
+```bash
+# Two-pass loudnorm to -16 LUFS, encode to MP3 192k
+ffmpeg -i raw.wav -af "loudnorm=I=-16:TP=-1:LRA=11:print_format=json" -f null - 2>&1 | tail -n 12
+# (read measured values, then apply with measured_I / measured_TP / measured_LRA / measured_thresh / offset)
+ffmpeg -i raw.wav -af "loudnorm=I=-16:TP=-1:LRA=11:measured_I=<I>:measured_TP=<TP>:measured_LRA=<LRA>:measured_thresh=<th>:offset=<o>:linear=true" -c:a libmp3lame -b:a 192k podcast.mp3
+```
+
+### Modern Format Batch (Folder Of JPEGs → AVIF)
+```bash
+mkdir -p avif
+for f in *.jpg; do
+  magick "$f" -quality 60 "avif/${f%.jpg}.avif"
+done
 ```
 
 ## Advanced Techniques
@@ -294,12 +433,20 @@ identify -format "%f: %wx%h %b\n" image.jpg
 
 Detailed guides in `references/`:
 
-- **ffmpeg-encoding.md** - Video/audio codecs, quality optimization, hardware acceleration
-- **ffmpeg-streaming.md** - HLS/DASH, live streaming, adaptive bitrate
-- **ffmpeg-filters.md** - Video/audio filters, complex filtergraphs
-- **imagemagick-editing.md** - Format conversion, effects, transformations
+- **ffmpeg-encoding.md** - Video/audio codecs, CRF/bitrate, hardware acceleration, two-pass VBR/CBR, GOP, profiles & levels, x264/x265 advanced opts, tune options, interactions
+- **ffmpeg-filters.md** - Video/audio filters (scale, crop, overlay, denoise, eq, fade, drawtext, etc.). Composition recipes split out to ffmpeg-composition.md
+- **ffmpeg-color.md** - LUT (`lut3d`, `.cube`), curves, HDR tone-mapping, colorspace conversion, pixel format & range
+- **ffmpeg-subtitles.md** - Burn-in, soft-mux, extract, format conversion (SRT/ASS/VTT), styling, sync
+- **ffmpeg-composition.md** - hstack/vstack/xstack grids, picture-in-picture, chromakey/colorkey, xfade transitions, concat (demuxer vs filter), slideshow, montage
+- **ffmpeg-audio-effects.md** - Silence detect/insert, reverb/chorus/flanger/phaser, dynaudnorm, two-pass loudnorm, audio crossfade & concat. SoX-better callouts
+- **ffmpeg-metadata.md** - Read/write metadata, strip for privacy, GPS, chapters, ID3 tags. exiftool callout for image EXIF/IPTC/XMP
+- **ffmpeg-analysis.md** - Scene detection, histogram, signalstats, motion estimation, blackdetect/freezedetect, ffprobe deep usage, frame-md5, PSNR/SSIM
+- **imagemagick-editing.md** - Format conversion, effects, transformations, ICC profiles
 - **imagemagick-batch.md** - Batch processing, mogrify, parallel operations
-- **format-compatibility.md** - Format support, codec recommendations
+- **imagemagick-modern-formats.md** - AVIF, HEIC, animated WebP, APNG, ICC profile preservation, version checks
+- **format-compatibility.md** - Format support, codec recommendations, minimum versions per format
+
+*For batch or multi-step workflows, a short Python wrapper around the ffmpeg / ImageMagick commands above can be cleaner than long bash chains. Optional — most tasks don't need it.*
 
 ## Common Parameters
 
@@ -322,6 +469,25 @@ Detailed guides in `references/`:
 - `800x` - Width only
 - `x600` - Height only
 - `50%` - Scale percentage
+
+### FFmpeg Subtitles
+- `-c:s` - Subtitle codec (`mov_text` for MP4, `srt` for MKV, `webvtt` for WebVTT)
+- `force_style` - Inline ASS-style override (e.g., `Fontname=`, `Fontsize=`, `PrimaryColour=`, `Alignment=`)
+- `-itsoffset` - Time offset for sync
+- `:fontsdir` - Custom font directory for the `subtitles=` filter
+
+### FFmpeg Color
+- `-color_primaries` - Color primaries tag (`bt709`, `bt2020`, `bt601-6-625`)
+- `-color_trc` - Transfer function (`bt709`, `smpte2084`, `arib-std-b67`)
+- `-colorspace` - Matrix coefficients (`bt709`, `bt2020nc`, `bt601`)
+- `-color_range` - Range (`tv` = limited 16-235, `pc` = full 0-255)
+- `-pix_fmt` - Pixel format (`yuv420p`, `yuv422p10le`, `yuv444p`)
+
+### FFmpeg Metadata
+- `-metadata` - Set container-level tag (`-metadata title="..."`)
+- `-metadata:s:<type>:<idx>` - Set per-stream tag (`-metadata:s:a:0 language=eng`)
+- `-map_metadata -1` - Strip all metadata
+- `-fflags +bitexact` - Strip encoder watermark
 
 ## Troubleshooting
 
@@ -347,6 +513,32 @@ sudo nano /etc/ImageMagick-7/policy.xml
 # Limit memory usage
 ffmpeg -threads 4 input.mp4 output.mp4
 magick -limit memory 2GB -limit map 4GB input.jpg output.jpg
+```
+
+**Subtitle font not found**
+```bash
+# Linux: fontconfig can't find a font when burning in subtitles
+# Either supply fontsdir, or force a font fontconfig has
+ffmpeg -i video.mp4 -vf "subtitles=subs.srt:fontsdir=/usr/share/fonts" output.mp4
+ffmpeg -i video.mp4 -vf "subtitles=subs.srt:force_style='Fontname=DejaVu Sans'" output.mp4
+```
+
+**HEIC: no decode delegate**
+```bash
+# ImageMagick missing libheif
+brew reinstall imagemagick   # macOS
+sudo apt install libheif-dev # Debian/Ubuntu, then rebuild IM if from source
+
+# Verify
+magick -list format | grep HEIC
+```
+
+**Two-pass log not found**
+```bash
+# Pass 1 wasn't run, was killed early, or used a different passlogfile
+# Use explicit passlogfile to keep them paired
+ffmpeg -y -i input.mp4 -c:v libx264 -b:v 2M -pass 1 -passlogfile /tmp/job1 -an -f null /dev/null
+ffmpeg -i input.mp4 -c:v libx264 -b:v 2M -pass 2 -passlogfile /tmp/job1 -c:a aac output.mp4
 ```
 
 ## Resources
